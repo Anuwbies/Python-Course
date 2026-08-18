@@ -6,13 +6,13 @@ Welcome to the comprehensive, multi-tiered Python Mastery Program. This curricul
 
 ## 🧭 Course Roadmap & Master Progress Tracker
 
-| Level | Course Track | Scope & Topics | Capstone Project | Status | Guide Folder |
-| :--- | :--- | :--- | :--- | :---: | :--- |
-| **01** | **Beginner (1st Year / CS101)** | Variables, I/O, Conditionals, Loops, Data Structures, Basic OOP | Console Banking System | `IN PROGRESS` 🔄 | [Level 1: Beginner](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/README.md) |
-| **02** | **Intermediate (Software Dev)** | OOP Deep Dive, Modules, Exceptions, Decorators, Generators, Pytest | Task Management Engine | `PENDING` ⏳ | [Level 2: Intermediate](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/README.md) |
-| **03** | **Advanced (DS, Algorithms & Concurrency)** | Big-O, Custom Trees/Graphs, Multithreading, Multiprocessing, AsyncIO | Async Web Crawler & Search Indexer | `PENDING` ⏳ | [Level 3: Advanced](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_3_Advanced/README.md) |
-| **04** | **Professional (Full-Stack Backend)** | FastAPI, PostgreSQL, SQLAlchemy ORM, Docker, CI/CD, JWT Auth | Production E-Commerce Microservice | `PENDING` ⏳ | [Level 4: Professional](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/README.md) |
-| **05** | **Expert (Internals & Systems)** | CPython VM Bytecode, Memory Model/GC, Metaclasses, C-Extensions | In-Memory Redis Engine & Bytecode JIT | `PENDING` ⏳ | [Level 5: Expert](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/README.md) |
+| Level | Course Track | Scope & Topics | Core Capstone Project | Additional Capstones | Status | Guide Folder |
+| :--- | :--- | :--- | :--- | :---: | :---: | :--- |
+| **01** | **Beginner (1st Year / CS101)** | Variables, I/O, Conditionals, Loops, Data Structures, Basic OOP | Console Banking System | [3 Projects](file:///C:/Users/asiro/Desktop/Capstone/Python/Capstones/Level_1_Beginner/README.md) | `IN PROGRESS` 🔄 | [Level 1: Beginner](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/README.md) |
+| **02** | **Intermediate (Software Dev)** | OOP Deep Dive, Modules, Exceptions, Decorators, Generators, Pytest | Task Management Engine | [3 Projects](file:///C:/Users/asiro/Desktop/Capstone/Python/Capstones/Level_2_Intermediate/README.md) | `PENDING` ⏳ | [Level 2: Intermediate](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/README.md) |
+| **03** | **Advanced (DS, Algorithms & Concurrency)** | Big-O, Custom Trees/Graphs, Multithreading, Multiprocessing, AsyncIO | Async Web Crawler & Search Indexer | [3 Projects](file:///C:/Users/asiro/Desktop/Capstone/Python/Capstones/Level_3_Advanced/README.md) | `PENDING` ⏳ | [Level 3: Advanced](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_3_Advanced/README.md) |
+| **04** | **Professional (Full-Stack Backend)** | FastAPI, PostgreSQL, SQLAlchemy ORM, Docker, CI/CD, JWT Auth | Production E-Commerce Microservice | [3 Projects](file:///C:/Users/asiro/Desktop/Capstone/Python/Capstones/Level_4_Professional/README.md) | `PENDING` ⏳ | [Level 4: Professional](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/README.md) |
+| **05** | **Expert (Internals & Systems)** | CPython VM Bytecode, Memory Model/GC, Metaclasses, C-Extensions | In-Memory Redis Engine & Bytecode JIT | [3 Projects](file:///C:/Users/asiro/Desktop/Capstone/Python/Capstones/Level_5_Expert/README.md) | `PENDING` ⏳ | [Level 5: Expert](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/README.md) |
 
 ---
 
