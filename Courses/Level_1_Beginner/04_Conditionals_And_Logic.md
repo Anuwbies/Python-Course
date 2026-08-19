@@ -1,264 +1,254 @@
-# Lesson 4: Conditional Statements (`if`, `elif`, `else`)
+# Lesson 4: Control Flow: Conditionals, Branching & Decision Logic
 
-Software becomes intelligent when it can make decisions. Conditional statements allow your program to evaluate dynamic data at runtime and execute specific branches of code depending on whether conditions are `True` or `False`.
+Real-world computer programs are not linear scripts; they make intelligent decisions based on runtime state. In this lesson, you will master conditional branching using `if`, `elif`, `else`, ternary conditional expressions, and membership testing.
 
 ---
 
 ## 🎯 Learning Objectives
 By the end of this lesson, you will:
-1. Understand control flow, execution branching, and Python's indentation rules.
-2. Construct single-branch (`if`), two-branch (`if...else`), and multi-branch (`if...elif...else`) logic trees.
-3. Master Python's concise **chained comparisons** (`650 <= score < 750`).
-4. Implement nested conditionals and understand how to flatten them cleanly.
-5. Write one-line **ternary conditional expressions**.
-6. Use string membership operators (`in` and `not in`).
-7. Identify and avoid common logical anti-patterns.
+1. Direct program execution branches using `if`, `elif`, and `else` blocks.
+2. Structure robust nested conditional logic without spaghetti code.
+3. Write clean, idiomatic one-line **Ternary Expressions** (`value if condition else fallback`).
+4. Perform collection and substring membership testing with `in` and `not in`.
+5. Identify and avoid common boolean conditional anti-patterns.
 
 ---
 
-## 1. Python Block Structure & Indentation Rules
+## 1. The `if`, `elif`, `else` Architecture
 
-Unlike languages like C, Java, or JavaScript that use curly braces `{ ... }` to denote code blocks, **Python uses indentation (strictly 4 spaces)**.
+Python uses indentation (standard 4 spaces) to define execution blocks:
+
+```python
+credit_score = 720
+
+if credit_score >= 750:
+    tier = "Platinum Elite"
+    rate_discount = 0.015
+elif credit_score >= 680:
+    tier = "Prime Gold"
+    rate_discount = 0.0075
+elif credit_score >= 620:
+    tier = "Standard"
+    rate_discount = 0.0
+else:
+    tier = "Subprime"
+    rate_discount = -0.02
+
+print(f"Customer Tier: {tier} | Rate Adjustment: {rate_discount * 100:+.2f}%")
+```
+
+---
+
+## 2. Nested Conditionals
+
+When a secondary decision depends strictly on a primary condition being met, conditions can be nested:
+
+```python
+has_valid_license = True
+blood_alcohol_content = 0.00
+
+if has_valid_license:
+    if blood_alcohol_content == 0.00:
+        print("✅ Cleared to operate commercial heavy transport.")
+    else:
+        print("❌ Prohibited: Zero-tolerance BAC policy violated.")
+else:
+    print("❌ Prohibited: Valid operator license required.")
+```
+
+---
+
+## 3. Ternary Conditional Operator (Inline `if-else`)
+
+For simple variable assignments based on a condition, Python supports an inline ternary expression:
+
+$$\text{result} = \text{value\_if\_true} \textbf{ if } \text{condition} \textbf{ else } \text{value\_if\_false}$$
 
 ```python
 account_balance = 450.00
-withdrawal_amount = 100.00
+withdrawal = 500.00
 
-if withdrawal_amount <= account_balance:
-    # Everything indented 4 spaces belongs to the 'if' block:
-    print("Withdrawal approved!")
-    account_balance -= withdrawal_amount
-    print(f"Remaining Balance: ${account_balance:.2f}")
-
-# Unindented code runs unconditionally after the block finishes:
-print("Thank you for using Apex Banking.")
-```
-
-> [!CAUTION]
-> **Indentation Rules**:
-> - Always use 4 spaces per indentation level. Never mix tabs and spaces.
-> - An `if` statement line **must** end with a colon (`:`).
-> - An `if` block cannot be empty. If you need a temporary placeholder, use the `pass` keyword:
->   ```python
->   if is_maintenance_mode:
->       pass  # TODO: implement maintenance handling
->   ```
-
----
-
-## 2. Multi-Way Branching: `if` - `elif` - `else`
-
-- **`if`**: Evaluates the primary condition first.
-- **`elif`** (*else-if*): Evaluated only if all preceding conditions were `False`. You can chain as many `elif` blocks as needed.
-- **`else`**: The fallback catch-all block executed if **none** of the conditions evaluated to `True`.
-
-```python
-http_status_code = 404
-
-if http_status_code == 200:
-    status_category = "Success: OK"
-elif http_status_code == 301:
-    status_category = "Redirect: Moved Permanently"
-elif http_status_code == 400:
-    status_category = "Client Error: Bad Request"
-elif http_status_code == 404:
-    status_category = "Client Error: Resource Not Found"
-elif http_status_code == 500:
-    status_category = "Server Error: Internal Server Crash"
-else:
-    status_category = f"Unknown Status Code ({http_status_code})"
-
-print(f"Response: {status_category}")
-```
-
-> [!NOTE]
-> Python tests conditions sequentially from top to bottom. The moment **one** condition matches, its block runs, and Python immediately skips the rest of the `if-elif-else` construct.
-
----
-
-## 3. Chained Comparisons & Nested Conditions
-
-Python allows intuitive mathematical range checks without needing verbose `and` statements:
-
-```python
-applicant_age = 28
-
-# Standard syntax in older languages:
-# if applicant_age >= 18 and applicant_age <= 65:
-
-# Pythonic Chained Comparison:
-if 18 <= applicant_age <= 65:
-    print("Applicant meets prime working-age eligibility criteria.")
-```
-
-### Nested Conditionals
-You can nest conditional blocks inside other conditional blocks:
-
-```python
-has_valid_id = True
-has_boarding_pass = True
-is_security_cleared = False
-
-if has_valid_id:
-    if has_boarding_pass:
-        if is_security_cleared:
-            print("Passenger cleared for aircraft boarding. ✈️")
-        else:
-            print("❌ Access Denied: Security screening pending.")
-    else:
-        print("❌ Access Denied: Missing boarding pass.")
-else:
-    print("❌ Access Denied: Missing valid government ID.")
+# Concise inline assignment:
+status_message = "APPROVED" if account_balance >= withdrawal else "DENIED - INSUFFICIENT FUNDS"
+print(f"Transaction Status: {status_message}")
 ```
 
 ---
 
-## 4. Ternary Conditional Expressions (One-Liners)
+## 4. Membership Testing: `in` and `not in`
 
-For simple value assignments based on a single condition, Python provides an elegant inline syntax:
-`value_if_true if condition else value_if_false`
+The `in` and `not in` operators test whether a substring exists within a string, or an item exists within a collection:
 
 ```python
-cart_subtotal = 85.00
-# Free shipping if cart is $50 or more, otherwise $7.95
-shipping_fee = 0.0 if cart_subtotal >= 50.00 else 7.95
+email_address = "admin@datacenter.internal.net"
 
-print(f"Shipping Fee: ${shipping_fee:.2f}")
+# Substring containment check:
+if "@" in email_address and email_address.endswith(".net"):
+    print("Valid internal network address format.")
+
+# Checking against unauthorized domains:
+blocked_providers = ("spammail.com", "throwaway.io", "tempinbox.org")
+user_domain = "tempinbox.org"
+
+if user_domain in blocked_providers:
+    print("❌ Registration blocked: Disposable email provider detected.")
 ```
 
 ---
 
-## 5. String Membership Testing: `in` and `not in`
+## 5. Common Boolean Anti-Patterns to Avoid
 
-The `in` operator checks if a substring is contained within a string:
-
+### ❌ The "Truthiness of Non-Empty Strings" Bug
 ```python
-email = input("Enter email address: ").strip().lower()
+user_role = "operator"
 
-if "@" in email and "." in email:
-    if "admin" in email:
-        print("Administrative account detected.")
-    else:
-        print("Standard user account detected.")
-else:
-    print("❌ Invalid email format: missing '@' or '.' domain.")
-```
-
----
-
-## 6. Common Anti-Patterns to Avoid
-
-### The "Truthy String" Bug:
-```python
-user_role = "editor"
-
-# ❌ WRONG: "manager" is a non-empty string, which is ALWAYS True!
-# if user_role == "admin" or "manager":  # Always evaluates to True!
+# ❌ WRONG: "manager" evaluates as a non-empty string which is ALWAYS True!
+if user_role == "admin" or "manager":  # Bug: always evaluates to True!
+    print("Access granted.")
 
 # ✅ CORRECT:
 if user_role == "admin" or user_role == "manager":
-    print("Access granted to elevated panel.")
+    print("Access granted.")
+
+# ✅ EVEN BETTER (using 'in'):
+if user_role in ("admin", "manager"):
+    print("Access granted.")
 ```
 
 ---
 
 ## 💻 Code Example & Reference
 
-See the full working code for this lesson in [Lesson_04_Conditionals_And_Logic.py](file:///C:/Users/asiro/Desktop/Capstone/Python/Testing/Level_1_Beginner/Lesson_04_Conditionals_And_Logic.py):
+The following real-life program models an **Automated Mortgage & Commercial Loan Risk Assessment Engine**, utilizing all conditional flow concepts from this lesson:
 
 ```python
-# Movie Ticket Dynamic Pricing Engine
-customer_age = int(input("Enter customer age: "))
-is_matinee = input("Is this a matinee screening? (yes/no): ").strip().lower() == "yes"
+# =====================================================================
+# REAL-WORLD SYSTEM: Commercial Mortgage Underwriting Risk Engine
+# =====================================================================
 
-if customer_age < 5:
-    base_price = 0.00
-elif 5 <= customer_age <= 12:
-    base_price = 8.50
-elif 13 <= customer_age <= 64:
-    base_price = 14.00
+print("=" * 65)
+print(f"{'🏦 COMMERCIAL MORTGAGE RISK & UNDERWRITING ENGINE':^65}")
+print("=" * 65)
+
+# 1. Inputs & Sanitization (Lessons 1 & 2)
+applicant_name = input("Enter Primary Borrower Name: ").strip().title()
+employment_type = input("Enter Employment (W2 / Self-Employed / Retired): ").strip().upper()
+annual_income = float(input("Enter Verified Gross Annual Income ($): "))
+monthly_debt = float(input("Enter Total Monthly Debt Obligations ($): "))
+requested_loan = float(input("Enter Requested Loan Principal ($): "))
+credit_score = int(input("Enter Credit Score (300-850): "))
+property_type = input("Property Type (Residential / Commercial / Industrial): ").strip().title()
+
+# 2. Arithmetic & Financial Debt-to-Income (DTI) Ratios (Lessons 1, 2, 3)
+monthly_income = annual_income / 12.0
+debt_to_income_ratio = (monthly_debt / monthly_income) * 100.0
+loan_to_income_ratio = requested_loan / annual_income
+
+# 3. Multi-branch Conditionals & Nested Underwriting Rules (Lesson 4)
+APPROVED_PROPERTY_TYPES = ("Residential", "Commercial", "Industrial")
+
+if property_type not in APPROVED_PROPERTY_TYPES:
+    decision = "REJECTED"
+    underwriting_notes = f"Property type '{property_type}' is outside our charter."
+    final_interest_rate = 0.0
 else:
-    base_price = 10.00
+    # Credit Score & DTI Verification Matrix
+    if credit_score >= 760 and debt_to_income_ratio <= 36.0:
+        decision = "APPROVED (TIER 1 PRIME)"
+        base_rate = 6.25
+        underwriting_notes = "Optimal credit profile; automatic fast-track approval."
+    elif credit_score >= 680 and debt_to_income_ratio <= 43.0:
+        decision = "APPROVED (TIER 2 STANDARD)"
+        base_rate = 6.95
+        underwriting_notes = "Acceptable risk profile; standard closing conditions."
+    elif credit_score >= 620 and debt_to_income_ratio <= 50.0:
+        # Nested employment stability check
+        if employment_type in ("W2", "RETIRED"):
+            decision = "CONDITIONAL APPROVAL"
+            base_rate = 7.85
+            underwriting_notes = "Requires 12 months verified cash reserves and manual audit."
+        else:
+            decision = "REJECTED"
+            base_rate = 0.0
+            underwriting_notes = "Self-employed applicants with <680 score require DTI under 40%."
+    else:
+        decision = "REJECTED"
+        base_rate = 0.0
+        underwriting_notes = "Credit score below underwriting threshold or excessive DTI."
 
-# Apply $3 discount for matinee screenings on paid tickets:
-if is_matinee and base_price > 0:
-    final_price = base_price - 3.00
-else:
-    final_price = base_price
+    # Ternary rate adjustment based on property class
+    rate_adjustment = 0.50 if property_type == "Commercial" else (0.75 if property_type == "Industrial" else 0.00)
+    final_interest_rate = base_rate + rate_adjustment if decision.startswith("APPROV") or decision.startswith("COND") else 0.0
 
-print(f"Ticket Price: ${final_price:.2f}")
+# 4. Formatted Underwriting Report Output (Lesson 1)
+print("\n" + "=" * 65)
+print(f"{'MORTGAGE UNDERWRITING DECISION':^65}")
+print("=" * 65)
+print(f"{'Borrower Name:':<30} {applicant_name}")
+print(f"{'Employment / Property:':<30} {employment_type} | {property_type}")
+print(f"{'Debt-to-Income (DTI):':<30} {debt_to_income_ratio:.2f}%")
+print(f"{'Credit Score:':<30} {credit_score} pts")
+print("-" * 65)
+print(f"{'FINAL DECISION:':<30} {decision}")
+print(f"{'Assigned Interest Rate:':<30} {f'{final_interest_rate:.2f}%' if final_interest_rate > 0 else 'N/A'}")
+print(f"{'Underwriting Notes:':<30} {underwriting_notes}")
+print("=" * 65)
 ```
+
+### 🔍 Code Explanation:
+- **Membership Validation**: `property_type not in APPROVED_PROPERTY_TYPES` verifies inputs immediately before evaluating downstream numbers.
+- **Hierarchical `if-elif-else`**: Branches evaluate risk bands from highest credit / lowest debt to higher risk thresholds.
+- **Nested Decisions**: Within the borderline credit band (`620-679`), an inner branch checks `employment_type` stability.
+- **Ternary Operator**: Computes commercial asset surcharges in a concise inline expression.
 
 ---
 
-## 📝 Quick Exercise: Commercial Loan & Credit Underwriting System
+## 📝 Quick Exercise: Hospital Emergency Department Triage Classifier
 
 ### 🏢 Real-Life Scenario
-You are developing the core automated risk assessment engine for a commercial business lending fintech platform. The system evaluates loan applications based on business registration status, years of operation, credit score, annual revenue, and Debt-to-Income (DTI) ratio.
+You are building the patient intake triage sorting system for a busy metropolitan emergency department. When a patient arrives, the triage nurse inputs vital statistics (heart rate, blood oxygen saturation $SpO_2$, pain scale, and chief complaint keywords). The system determines the Emergency Severity Index (ESI Level 1 to 4) and routes the patient to Resuscitation, Trauma, Urgent Care, or General Waiting.
 
 ### 📋 Requirements
-1. Capture and sanitize inputs:
-   - `business_name`: Prompt with `"Enter business name: "`, format with `.strip().title()`.
-   - `business_status`: Prompt with `"Enter entity status (active/pending/suspended): "`, format with `.strip().lower()`.
-   - `years_in_business`: Prompt with `"Enter years in operation: "`, cast to `float`.
-   - `credit_score`: Prompt with `"Enter principal credit score (300-850): "`, cast to `int`.
-   - `annual_revenue`: Prompt with `"Enter annual revenue ($): "`, cast to `float`.
-   - `monthly_debt`: Prompt with `"Enter total monthly debt payments ($): "`, cast to `float`.
-2. Compute financial metrics:
-   - `monthly_revenue = annual_revenue / 12.0`
-   - `dti_ratio = (monthly_debt / monthly_revenue) * 100.0`
-3. Multi-branch underwriting logic:
-   - **Check 1**: If `business_status != "active"`:
-     - `decision = "REJECTED: Business entity status is not active."`
-     - `interest_rate = 0.0`
-     - `max_credit_line = 0.0`
-   - **Check 2**: Else if `years_in_business < 1.0`:
-     - `decision = "REJECTED: Minimum 1.0 year of operational history required."`
-     - `interest_rate = 0.0`
-     - `max_credit_line = 0.0`
-   - **Check 3 (Tier 1 Prime)**: Else if `credit_score >= 740` and `dti_ratio <= 30.0`:
-     - `decision = "APPROVED: Tier 1 Prime Business Line of Credit"`
-     - `interest_rate = 5.25`
-     - `max_credit_line = annual_revenue * 0.25`
-   - **Check 4 (Tier 2 Standard)**: Else if `650 <= credit_score < 740` and `dti_ratio <= 45.0`:
-     - `decision = "APPROVED: Tier 2 Standard Commercial Facility"`
-     - `interest_rate = 8.50`
-     - `max_credit_line = annual_revenue * 0.15`
-   - **Check 5 (High Risk)**: Else if `credit_score < 600` or `dti_ratio > 50.0`:
-     - `decision = "REJECTED: Subprime credit score or excessive debt burden."`
-     - `interest_rate = 0.0`
-     - `max_credit_line = 0.0`
-   - **Check 6 (Fallback)**: Else:
-     - `decision = "MANUAL REVIEW: Application flagged for Senior Committee review."`
-     - `interest_rate = 11.00`
-     - `max_credit_line = annual_revenue * 0.08`
-4. Output the structured underwriting report.
+1. Capture and sanitize patient intake data:
+   - `patient_name`: Formatted with `.strip().title()`
+   - `patient_age`: Cast to `int`
+   - `heart_rate_bpm`: Cast to `int`
+   - `spo2_percentage`: Cast to `float` (Blood oxygen percentage, e.g. `91.5`)
+   - `pain_level`: Cast to `int` (scale 1-10)
+   - `symptoms`: Formatted with `.strip().lower()`
+2. Triage Classification Rules (Hierarchical Conditionals):
+   - **Level 1 (CRITICAL - RESUSCITATION)**: If `spo2_percentage < 88.0` OR `heart_rate_bpm > 140` OR (`"unresponsive"` in `symptoms` or `"cardiac"` in `symptoms`).
+   - **Level 2 (EMERGENT - TRAUMA BAY)**: Else if `spo2_percentage <= 92.0` OR `heart_rate_bpm >= 120` OR (`"chest pain"` in `symptoms` or `"stroke"` in `symptoms`).
+   - **Level 3 (URGENT - ACUTE CARE)**: Else if `pain_level >= 7` OR `patient_age >= 75`.
+   - **Level 4 (STANDARD - GENERAL CLINIC)**: All other stable cases.
+3. Compute estimated triage wait time using a ternary expression:
+   - `0 minutes` if Level 1 or Level 2, else `15 minutes` if Level 3, else `60 minutes`.
+4. Output the official triage intake badge.
 
 > [!IMPORTANT]
-> **Strict Constraint**: Use **only** concepts covered in Lessons 1 through 4 (variables, primitives, `input()`, `int()`, `float()`, string methods, arithmetic, comparison, logical `and`/`or`/`not`, `if`/`elif`/`else`, nested conditionals, f-strings, and `print()`). Do **not** use loops, lists, or functions.
+> **Cumulative Constraint**: Combine concepts from **Lessons 1, 2, 3, and 4** (variables, types, input sanitization, casting, arithmetic, compound boolean logic, `in` membership, `if-elif-else`, ternary, and f-string formatting).
 
-### 🎯 Sample Interactive Run
+### 🎯 Expected Output
+*(Assuming the user inputs: Name: `  sarah connor  `, Age: `45`, Heart Rate: `125`, SpO2: `94.0`, Pain: `8`, Symptoms: `severe chest pain after exercise`)*
+
 ```text
-Enter business name:   apex logistics llc   
-Enter entity status (active/pending/suspended): active
-Enter years in operation: 3.5
-Enter principal credit score (300-850): 760
-Enter annual revenue ($): 480000.00
-Enter total monthly debt payments ($): 6000.00
+Enter Patient Name:   sarah connor  
+Enter Patient Age: 45
+Enter Resting Heart Rate (BPM): 125
+Enter Blood Oxygen SpO2 (%): 94.0
+Enter Pain Scale (1-10): 8
+Enter Chief Symptoms: severe chest pain after exercise
 
 ==================================================
-        COMMERCIAL LOAN UNDERWRITING REPORT       
+           EMERGENCY TRIAGE INTAKE PASS           
 ==================================================
-Applicant:        Apex Logistics Llc
-Entity Status:    active | Experience: 3.5 yrs
-Credit Score:     760
-Annual Revenue:   $480,000.00 (Monthly: $40,000.00)
-Monthly Debt:     $6,000.00
-Calculated DTI:   15.00%
+Patient:       Sarah Connor (Age: 45)
+Vitals:        HR: 125 BPM | SpO2: 94.0% | Pain: 8/10
+Symptoms:      severe chest pain after exercise
 --------------------------------------------------
-DECISION:         APPROVED: Tier 1 Prime Business Line of Credit
-Interest Rate:    5.25%
-Max Credit Line:  $120,000.00
+TRIAGE LEVEL:  LEVEL 2 - EMERGENT
+ASSIGNED WARD: TRAUMA BAY / RAPID ACUTE
+EST. WAIT TIME:0 mins (IMMEDIATE DOCTOR EVALUATION)
 ==================================================
 ```
 
@@ -266,98 +256,47 @@ Max Credit Line:  $120,000.00
 <summary><b>🔍 View Exercise Solution</b></summary>
 
 ```python
-# 1. Capture and sanitize applicant inputs
-business_name = input("Enter business name: ").strip().title()
-business_status = input("Enter entity status (active/pending/suspended): ").strip().lower()
-years_in_business = float(input("Enter years in operation: "))
-credit_score = int(input("Enter principal credit score (300-850): "))
-annual_revenue = float(input("Enter annual revenue ($): "))
-monthly_debt = float(input("Enter total monthly debt payments ($): "))
+# 1. Inputs and Sanitization (Lessons 1 & 2)
+patient_name = input("Enter Patient Name: ").strip().title()
+patient_age = int(input("Enter Patient Age: "))
+heart_rate_bpm = int(input("Enter Resting Heart Rate (BPM): "))
+spo2_percentage = float(input("Enter Blood Oxygen SpO2 (%): "))
+pain_level = int(input("Enter Pain Scale (1-10): "))
+symptoms = input("Enter Chief Symptoms: ").strip().lower()
 
-# 2. Compute financial ratios
-monthly_revenue = annual_revenue / 12.0
-dti_ratio = (monthly_debt / monthly_revenue) * 100.0
-
-# 3. Multi-branch underwriting logic
-if business_status != "active":
-    decision = "REJECTED: Business entity status is not active."
-    interest_rate = 0.0
-    max_credit_line = 0.0
-elif years_in_business < 1.0:
-    decision = "REJECTED: Minimum 1.0 year of operational history required."
-    interest_rate = 0.0
-    max_credit_line = 0.0
-elif credit_score >= 740 and dti_ratio <= 30.0:
-    decision = "APPROVED: Tier 1 Prime Business Line of Credit"
-    interest_rate = 5.25
-    max_credit_line = annual_revenue * 0.25
-elif 650 <= credit_score < 740 and dti_ratio <= 45.0:
-    decision = "APPROVED: Tier 2 Standard Commercial Facility"
-    interest_rate = 8.50
-    max_credit_line = annual_revenue * 0.15
-elif credit_score < 600 or dti_ratio > 50.0:
-    decision = "REJECTED: Subprime credit score or excessive debt burden."
-    interest_rate = 0.0
-    max_credit_line = 0.0
+# 2. Triage Decision Tree (Lessons 3 & 4)
+if (spo2_percentage < 88.0) or (heart_rate_bpm > 140) or ("unresponsive" in symptoms or "cardiac" in symptoms):
+    triage_level = "LEVEL 1 - CRITICAL"
+    assigned_ward = "RESUSCITATION UNIT"
+    est_wait = "0 mins (IMMEDIATE RESUSCITATION)"
+elif (spo2_percentage <= 92.0) or (heart_rate_bpm >= 120) or ("chest pain" in symptoms or "stroke" in symptoms):
+    triage_level = "LEVEL 2 - EMERGENT"
+    assigned_ward = "TRAUMA BAY / RAPID ACUTE"
+    est_wait = "0 mins (IMMEDIATE DOCTOR EVALUATION)"
+elif (pain_level >= 7) or (patient_age >= 75):
+    triage_level = "LEVEL 3 - URGENT"
+    assigned_ward = "ACUTE FAST TRACK"
+    est_wait = "15 mins"
 else:
-    decision = "MANUAL REVIEW: Application flagged for Senior Committee review."
-    interest_rate = 11.00
-    max_credit_line = annual_revenue * 0.08
+    triage_level = "LEVEL 4 - STANDARD"
+    assigned_ward = "GENERAL CLINIC WAITING"
+    est_wait = "60 mins"
 
-# 4. Formatted underwriting report
+# 3. Formatted Triage Pass Output (Lesson 1)
 print("\n==================================================")
-print("        COMMERCIAL LOAN UNDERWRITING REPORT       ")
+print("           EMERGENCY TRIAGE INTAKE PASS           ")
 print("==================================================")
-print(f"Applicant:        {business_name}")
-print(f"Entity Status:    {business_status} | Experience: {years_in_business:.1f} yrs")
-print(f"Credit Score:     {credit_score}")
-print(f"Annual Revenue:   ${annual_revenue:,.2f} (Monthly: ${monthly_revenue:,.2f})")
-print(f"Monthly Debt:     ${monthly_debt:,.2f}")
-print(f"Calculated DTI:   {dti_ratio:.2f}%")
+print(f"Patient:       {patient_name} (Age: {patient_age})")
+print(f"Vitals:        HR: {heart_rate_bpm} BPM | SpO2: {spo2_percentage:.1f}% | Pain: {pain_level}/10")
+print(f"Symptoms:      {symptoms}")
 print("--------------------------------------------------")
-print(f"DECISION:         {decision}")
-print(f"Interest Rate:    {interest_rate:.2f}%")
-print(f"Max Credit Line:  ${max_credit_line:,.2f}")
+print(f"TRIAGE LEVEL:  {triage_level}")
+print(f"ASSIGNED WARD: {assigned_ward}")
+print(f"EST. WAIT TIME:{est_wait}")
 print("==================================================")
 ```
-</details>
 
----
-
-## 🧠 Self-Check Quiz
-
-1. **What is printed by the following code?**
-   ```python
-   score = 85
-   if score >= 90:
-       print("A")
-   elif score >= 80:
-       print("B")
-   elif score >= 70:
-       print("C")
-   else:
-       print("D")
-   ```
-   - A) `B` and `C`
-   - B) `B`
-   - C) `A`
-   - D) `C`
-
-2. **What does the expression `"python" in "Intro to Python Programming".lower()` evaluate to?**
-   - A) `False`
-   - B) `True`
-   - C) `TypeError`
-   - D) `None`
-
-3. **Why is `if role == "guest" or "trial":` a bug in Python?**
-   - A) `"trial"` is evaluated as a standalone boolean and is always truthy.
-   - B) Python does not allow the `or` keyword inside `if` statements.
-   - C) Strings cannot be compared with `==`.
-   - D) It produces a `SyntaxError`.
-
-<details>
-<summary><b>View Answers</b></summary>
-1: B (Execution stops immediately after the first matching branch: score >= 80)<br>
-2: B (After lowercasing, "python" is indeed a substring)<br>
-3: A (Non-empty string "trial" is always True, causing the condition to always succeed)
+**Explanation of the Solution:**
+- `symptoms` is normalized to lowercase so string membership searches (`"chest pain" in symptoms`) work regardless of user casing.
+- The highest risk life-threat conditions are evaluated at the top of the `if-elif` chain to prevent missing emergency protocols.
 </details>

@@ -1,156 +1,336 @@
 # Lesson 6: First-Class Functions, Closures & Decorators
 
-Decorators are one of Python's most powerful, expressive, and distinctive design patterns. They allow you to dynamically modify, extend, or monitor the behavior of functions and methods without modifying their source code.
+In Python, functions are **first-class citizens**—they can be assigned to variables, passed as arguments into other functions, stored in collections, and returned from other functions. Building upon this foundation, **Decorators** allow engineers to dynamically inject cross-cutting behavior (such as authentication, caching, rate-limiting, timing, and error-retrying) around existing functions without modifying their underlying source code.
 
 ---
 
 ## 🎯 Learning Objectives
 By the end of this lesson, you will:
-1. Understand First-Class Functions (passing and returning functions).
-2. Create lexical Closures.
-3. Write custom function decorators.
-4. Use `functools.wraps` to preserve function signatures and docstrings.
-5. Create decorators that accept arguments (e.g. `@retry(max_attempts=3)`).
+1. Treat functions as first-class objects (higher-order functions).
+2. Understand lexical variable capture and build stateful **Closures** using the `nonlocal` keyword.
+3. Write clean, reusable **Function Decorators** accepting arbitrary `*args` and `**kwargs`.
+4. Preserve docstrings and function names using `functools.wraps`.
+5. Implement advanced **Parameterized Decorators** that accept configuration arguments.
+6. Chain multiple decorators together in proper execution order.
 
 ---
 
-## 1. First-Class Functions & Closures
-
-In Python, functions are **first-class citizens**: they can be assigned to variables, passed as arguments, and returned from other functions.
+## 1. First-Class Functions & Higher-Order Functions
 
 ```python
-def make_multiplier(factor):
-    # Inner function forms a closure over 'factor'
-    def multiplier(number):
-        return number * factor
-    return multiplier
+def format_usd(amount: float) -> str:
+    return f"${amount:,.2f}"
 
-double = make_multiplier(2)
-triple = make_multiplier(3)
+def format_eur(amount: float) -> str:
+    return f"€{amount:,.2f}"
 
-print(double(5)) # 10
-print(triple(5)) # 15
+# Higher-order function: accepts a function as an argument
+def print_invoice_item(name: str, price: float, formatter_fn) -> None:
+    print(f"Item: {name:<20} | Price: {formatter_fn(price)}")
+
+print_invoice_item("Cloud Server", 1450.00, format_usd)
+print_invoice_item("Domain Name", 14.99, format_eur)
 ```
 
 ---
 
-## 2. Anatomy of a Decorator
+## 2. Lexical Closures & The `nonlocal` Keyword
 
-A decorator is simply a function that takes another function as input, wraps it with extra behavior, and returns the wrapped function.
+A **Closure** is a nested function that remembers and accesses variables from its enclosing lexical scope, even after the outer function has finished executing:
 
 ```python
-import time
-import functools
+def create_rate_limiter(max_requests: int):
+    """Factory creating an isolated rate counter closure."""
+    call_count = 0 # Enclosed state variable
 
-def timer_decorator(func):
-    """Measures and logs the execution time of any function."""
-    @functools.wraps(func) # Preserves func.__name__ and docstrings
+    def limiter():
+        nonlocal call_count # Binds to outer call_count
+        call_count += 1
+        if call_count > max_requests:
+            print(f"❌ Rate limit exceeded ({call_count}/{max_requests})!")
+            return False
+        print(f"✅ Request allowed ({call_count}/{max_requests})")
+        return True
+
+    return limiter
+
+api_limiter = create_rate_limiter(max_requests=2)
+api_limiter() # True (1/2)
+api_limiter() # True (2/2)
+api_limiter() # False (3/2 - Blocked)
+```
+
+---
+
+## 3. Function Decorators & `functools.wraps`
+
+A decorator is a syntactic wrapper around a function:
+```python
+@my_decorator
+def target_function(): ...
+# Equivalent to: target_function = my_decorator(target_function)
+```
+
+> [!IMPORTANT]
+> Always decorate wrapper functions with `@functools.wraps(fn)`. Without `@wraps`, the decorated function loses its original `__name__` and `__doc__`, breaking debugging and reflection tools.
+
+```python
+import functools
+import time
+
+def execution_timer(func):
+    """Measures wall-clock execution time of a function."""
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.perf_counter()
         result = func(*args, **kwargs)
-        end_time = time.perf_counter()
-        duration = end_time - start_time
-        print(f"⏱️ [{func.__name__}] executed in {duration:.6f} seconds.")
+        elapsed = time.perf_counter() - start_time
+        print(f"⏱️ [{func.__name__}] Execution took {elapsed * 1000:.3f} ms")
         return result
     return wrapper
 
-# Applying the decorator using @ syntax:
-@timer_decorator
-def calculate_heavy_sum(n):
-    return sum(i * i for i in range(n))
+@execution_timer
+def compute_heavy_hash(data: str) -> int:
+    """Computes a mock cryptographic hash."""
+    time.sleep(0.05)
+    return hash(data)
 
-calculate_heavy_sum(1_000_000)
+compute_heavy_hash("payload_data")
+print(f"Function name preserved: {compute_heavy_hash.__name__}") # 'compute_heavy_hash'
 ```
 
 ---
 
-## 3. Real-World Decorator: Retry Logic on Failure
+## 4. Parameterized Decorators (Decorators with Arguments)
+
+To pass parameters into a decorator (e.g. `@retry(max_attempts=3)`), construct a 3-level function hierarchy:
 
 ```python
-import time
 import functools
 
-def retry(max_attempts=3, delay_seconds=1.0):
-    """Decorator factory that retries flaky network/database calls."""
+def retry(max_attempts: int = 3, fallback_value = None):
+    """Decorator factory accepting configuration parameters."""
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            attempts = 0
-            while attempts < max_attempts:
+            for attempt in range(1, max_attempts + 1):
                 try:
                     return func(*args, **kwargs)
-                except Exception as error:
-                    attempts += 1
-                    print(f"⚠️ Attempt {attempts}/{max_attempts} failed for '{func.__name__}': {error}")
-                    if attempts >= max_attempts:
-                        raise error
-                    time.sleep(delay_seconds)
+                except Exception as err:
+                    print(f"⚠️ [{func.__name__}] Attempt {attempt}/{max_attempts} failed: {err}")
+                    if attempt == max_attempts:
+                        print(f"❌ [{func.__name__}] All {max_attempts} retries exhausted. Returning fallback.")
+                        return fallback_value
         return wrapper
     return decorator
-
-@retry(max_attempts=3, delay_seconds=0.5)
-def fetch_remote_data():
-    # Simulating a flaky network request
-    import random
-    if random.random() < 0.7:
-        raise ConnectionError("Server unavailable")
-    return {"status": 200, "data": "Success!"}
 ```
 
 ---
 
-## 📝 Quick Exercise
+## 💻 Code Example & Reference
 
-**Prompt**:
-Write an `@auth_required(role)` decorator:
-1. Accepts a required role string (e.g. `"admin"`).
-2. Inspects a keyword argument `current_user = {"name": "...", "role": "..."}` passed to the decorated function.
-3. If the user's role matches, execute the function; otherwise raise a `PermissionError("Access Denied")`.
+The following real-life program models an **Enterprise API Endpoint Security, Caching & Resilience Stack**, combining closures, metadata preservation, parameterized retry logic, and role-based access enforcement:
+
+```python
+# =====================================================================
+# REAL-WORLD SYSTEM: Enterprise Microservice API Decorator Framework
+# =====================================================================
+
+import functools
+import time
+
+# 1. Parameterized RBAC Role-Guard Decorator (Lesson 6)
+def require_role(allowed_roles: set[str]):
+    """Enforces that the current authenticated context contains required roles."""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(user_context: dict, *args, **kwargs):
+            user_role = user_context.get("role", "GUEST")
+            if user_role not in allowed_roles:
+                raise PermissionError(f"Access Denied: Role '{user_role}' is unauthorized for {func.__name__}()")
+            return func(user_context, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+# 2. In-Memory Cache / Memoization Decorator with Closure (Lesson 6)
+def memoize_cache(ttl_seconds: int = 60):
+    """Caches deterministic API responses in a closure-backed memory cache."""
+    def decorator(func):
+        cache: dict[str, tuple[any, float]] = {} # Closure state
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            # Create hashable cache key from arguments
+            cache_key = f"{args[1:]}:{sorted(kwargs.items())}" # Skip user_context in key
+            now = time.time()
+            
+            if cache_key in cache:
+                cached_result, timestamp = cache[cache_key]
+                if now - timestamp < ttl_seconds:
+                    print(f"⚡ [CACHE HIT] {func.__name__} returned instant cached response.")
+                    return cached_result
+
+            # Compute and store fresh result
+            result = func(*args, **kwargs)
+            cache[cache_key] = (result, now)
+            print(f"🔄 [CACHE MISS] {func.__name__} executed live database query.")
+            return result
+        return wrapper
+    return decorator
+
+
+# 3. Microservice Endpoint Definitions with Stacked Decorators
+@require_role({"ADMIN", "BILLING_OPS"})
+@memoize_cache(ttl_seconds=30)
+def fetch_financial_audit(user_context: dict, quarter: str, fiscal_year: int) -> dict:
+    """Simulates expensive database financial report generation."""
+    # Simulated database work
+    return {
+        "fiscal_period": f"{quarter}-{fiscal_year}",
+        "gross_revenue": 4_850_000.00,
+        "operating_margin_pct": 24.5,
+        "audited_by": user_context["username"]
+    }
+
+
+# 4. System Execution Simulation
+admin_user = {"username": "Elena Rostova", "role": "ADMIN"}
+guest_user = {"username": "Anonymous", "role": "GUEST"}
+
+print("=" * 70)
+print(f"{'MICROSERVICE SECURITY & CACHING DECORATOR SUITE':^70}")
+print("=" * 70)
+
+# Request 1: Initial call (Cache Miss + Admin Approved)
+print("\n--- Request #1: Admin queries Q3-2026 ---")
+report1 = fetch_financial_audit(admin_user, "Q3", 2026)
+print(f"Report: {report1['fiscal_period']} | Revenue: ${report1['gross_revenue']:,.2f}")
+
+# Request 2: Immediate duplicate call (Cache Hit)
+print("\n--- Request #2: Admin re-queries Q3-2026 ---")
+report2 = fetch_financial_audit(admin_user, "Q3", 2026)
+print(f"Report: {report2['fiscal_period']} | Revenue: ${report2['gross_revenue']:,.2f}")
+
+# Request 3: Unauthorized role access attempt
+print("\n--- Request #3: Guest attempts to access financial audit ---")
+try:
+    fetch_financial_audit(guest_user, "Q3", 2026)
+except PermissionError as auth_err:
+    print(f"🚨 Security Guard Blocked Request: {auth_err}")
+
+print("=" * 70)
+```
+
+### 🔍 Code Explanation:
+- **`require_role` (Parameterized Decorator)**: Intercepts function execution to inspect incoming `user_context` before permitting access to protected business routines.
+- **`memoize_cache` (Stateful Closure)**: Maintains an isolated `cache` dictionary across function calls, serving cached answers transparently on matching parameters.
+- **Decorator Stacking**: `@require_role` and `@memoize_cache` combine orthogonally to provide clean separation of concerns without cluttering the business function.
+
+---
+
+## 📝 Quick Exercise: Database Query Retry & Performance Profiler Decorator Framework
+
+### 🏢 Real-Life Scenario
+You are developing the database driver resiliency middleware for a high-traffic web application. Database queries occasionally encounter transient network dropouts. You must build a `@retry_query(max_retries=3)` decorator that automatically catches transient exceptions, retries the query, and an `@audit_profile` decorator that records the execution time.
+
+### 📋 Requirements
+1. **Define `@audit_profile` Decorator**:
+   - Uses `time.perf_counter()` to measure function duration.
+   - Preserves metadata using `@functools.wraps`.
+   - Prints `f"[AUDIT] Query '{func.__name__}' finished in {elapsed_ms:.2f}ms"`.
+2. **Define `@retry_query(max_retries=3)` Parameterized Decorator**:
+   - Accepts `max_retries: int = 3`.
+   - Attempts executing the wrapped function.
+   - If an exception occurs, catches the error, prints `f"⚠️ Attempt {attempt}/{max_retries} failed: {err}. Retrying..."`, and continues.
+   - If all attempts fail, raises the final exception.
+3. **Decorate Mock Query Function `execute_db_query(query_sql: str, should_fail_times: int)`**:
+   - Uses an internal closure or counter to simulate failing a specific number of times before succeeding.
+4. Execute test queries and observe the automatic retries and execution profiling.
+
+> [!IMPORTANT]
+> **Cumulative Constraint**: Combine Level 2 decorators, closures, `functools.wraps`, and custom error handling with Level 1 loops, functions, and string formatting.
+
+### 🎯 Expected Output
+```text
+==================================================
+        DATABASE RESILIENCE DECORATOR SUITE       
+==================================================
+--- Test 1: Query failing twice before succeeding ---
+⚠️ Attempt 1/3 failed: Transient network drop. Retrying...
+⚠️ Attempt 2/3 failed: Transient network drop. Retrying...
+[AUDIT] Query 'execute_db_query' finished in 0.12ms
+✅ Query Succeeded: Returned 14 records for 'SELECT * FROM users'
+==================================================
+```
 
 <details>
 <summary><b>🔍 View Exercise Solution</b></summary>
 
 ```python
 import functools
+import time
 
-def auth_required(required_role: str):
+# 1. Performance Profiler Decorator (Level 2)
+def audit_profile(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        elapsed_ms = (time.perf_counter() - start) * 1000.0
+        print(f"[AUDIT] Query '{func.__name__}' finished in {elapsed_ms:.2f}ms")
+        return result
+    return wrapper
+
+
+# 2. Parameterized Retry Decorator (Level 2)
+def retry_query(max_retries: int = 3):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            user = kwargs.get("current_user")
-            if not user or user.get("role") != required_role:
-                raise PermissionError(f"Access Denied: Requires '{required_role}' role.")
-            return func(*args, **kwargs)
+            last_exception = None
+            for attempt in range(1, max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as err:
+                    last_exception = err
+                    print(f"⚠️ Attempt {attempt}/{max_retries} failed: {err}. Retrying...")
+            
+            # If all retries exhausted, raise last error
+            raise last_exception
         return wrapper
     return decorator
 
-@auth_required("admin")
-def delete_database_record(record_id: int, current_user: dict = None):
-    print(f"✅ Record {record_id} successfully deleted by {current_user['name']}.")
 
-# Testing:
-admin_user = {"name": "Alice", "role": "admin"}
-guest_user = {"name": "Bob", "role": "guest"}
+# 3. Flaky Database Query Simulation
+call_counter = 0
 
-delete_database_record(42, current_user=admin_user) # Works!
-# delete_database_record(42, current_user=guest_user) # ❌ Raises PermissionError
+@audit_profile
+@retry_query(max_retries=3)
+def execute_db_query(query_sql: str, failures_to_simulate: int = 2) -> dict:
+    global call_counter
+    call_counter += 1
+    if call_counter <= failures_to_simulate:
+        raise ConnectionResetError("Transient network drop")
+    return {"status": "SUCCESS", "rows": 14, "query": query_sql}
+
+
+# 4. Execution Run
+print("==================================================")
+print("        DATABASE RESILIENCE DECORATOR SUITE       ")
+print("==================================================")
+print("--- Test 1: Query failing twice before succeeding ---")
+
+try:
+    res = execute_db_query("SELECT * FROM users", failures_to_simulate=2)
+    print(f"✅ Query Succeeded: Returned {res['rows']} records for '{res['query']}'")
+except Exception as fatal_err:
+    print(f"❌ Fatal Failure: {fatal_err}")
+
+print("==================================================")
 ```
+
+**Explanation of the Solution:**
+- `@retry_query(max_retries=3)` catches `ConnectionResetError` and transparently re-runs the target function up to 3 times.
+- `@audit_profile` wraps the successful execution to capture and report execution duration in milliseconds.
 </details>
-
----
-
-## 🧠 Self-Check Quiz
-
-1. **What does `@my_decorator` placed directly above `def my_func():` do behind the scenes?**
-   - A) Compiles the function to C
-   - B) Executes `my_func = my_decorator(my_func)`
-   - C) Deletes the function
-   - D) Runs the function in a background process
-   *(Answer: B)*
-
-2. **Why is `@functools.wraps(func)` used inside a custom decorator wrapper?**
-   - A) To prevent memory leaks
-   - B) To ensure the original function name (`__name__`) and docstring (`__doc__`) are preserved
-   - C) It is required by Python syntax
-   - D) To make recursion faster
-   *(Answer: B)*

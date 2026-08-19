@@ -6,17 +6,17 @@ Welcome to **Level 4**! This course prepares you for industry-grade software eng
 
 ## 📊 Level 4 Progress Tracker
 
-| Lesson / Milestone | Lesson Title & Detailed Guide | Exercises | Quiz | Status |
-| :--- | :--- | :---: | :---: | :---: |
-| **Lesson 1** | [01_FastAPI_And_Pydantic.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/01_FastAPI_And_Pydantic.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 2** | [02_Relational_Databases_SQL.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/02_Relational_Databases_SQL.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 3** | [03_SQLAlchemy_Async_ORM.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/03_SQLAlchemy_Async_ORM.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 4** | [04_Alembic_Migrations.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/04_Alembic_Migrations.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 5** | [05_JWT_Auth_And_Security.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/05_JWT_Auth_And_Security.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 6** | [06_Celery_And_Redis_Queues.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/06_Celery_And_Redis_Queues.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 7** | [07_Docker_Containerization.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/07_Docker_Containerization.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 8** | [08_CICD_And_Monitoring.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/08_CICD_And_Monitoring.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Capstone** | **Level 4 Capstone: Production E-Commerce Microservice API** | — | — | `PENDING` ⏳ |
+| Lesson / Milestone | Lesson Title & Detailed Guide | Exercises | Status |
+| :--- | :--- | :---: | :---: |
+| **Lesson 1** | [01_Modern_Web_APIs_FastAPI.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/01_Modern_Web_APIs_FastAPI.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 2** | [02_Relational_Databases_And_SQL.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/02_Relational_Databases_And_SQL.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 3** | [03_ORM_With_SQLAlchemy.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/03_ORM_With_SQLAlchemy.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 4** | [04_Database_Migrations_Alembic.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/04_Database_Migrations_Alembic.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 5** | [05_Authentication_JWT_OAuth2.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/05_Authentication_JWT_OAuth2.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 6** | [06_Distributed_Tasks_Celery_Redis.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/06_Distributed_Tasks_Celery_Redis.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 7** | [07_Containerization_Docker.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/07_Containerization_Docker.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 8** | [08_Testing_CI_CD_Production.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/08_Testing_CI_CD_Production.md) | [x] | `COMPLETED` ✅ |
+| **Capstone** | **Level 4 Capstone: Production E-Commerce Microservice API** | — | `PENDING` ⏳ |
 
 ---
 

@@ -1,236 +1,249 @@
-# Lesson 6: Lists & Tuples
+# Lesson 6: Sequence Data Structures: Lists & Tuples
 
-Until now, each variable in our programs stored only a single value. In this lesson, you will learn how to store, organize, and transform ordered collections of data using **Lists** (mutable sequences) and **Tuples** (immutable sequences).
+Up to this point, our variables held single individual values. However, real-world systems manage collections of items: orders in a shopping cart, server logs in a queue, or stock price ticks across a trading day. In this lesson, you will master Python's two foundational sequence types: mutable **Lists** and immutable **Tuples**.
 
 ---
 
 ## 🎯 Learning Objectives
 By the end of this lesson, you will:
-1. Create and manipulate Python lists `[...]` and tuples `(...)`.
-2. Master 0-based indexing, negative indexing, and slicing `[start:stop:step]`.
-3. Use essential list mutation methods (`.append()`, `.extend()`, `.insert()`, `.pop()`, `.remove()`, `.sort()`, `.reverse()`, `.copy()`).
-4. Understand **mutability vs. immutability** and the reference vs. shallow copy model.
-5. Utilize built-in sequence functions: `len()`, `sum()`, `min()`, `max()`, and `.index()`.
-6. Write concise, readable, and high-performance **List Comprehensions**.
+1. Create and manipulate dynamic mutable **Lists** (`list`).
+2. Master core list methods: `append()`, `insert()`, `extend()`, `pop()`, `remove()`, and `sort()`.
+3. Slice sequences using zero-indexed notation: `[start:stop:step]`.
+4. Write concise, performant **List Comprehensions** with conditional filters.
+5. Create immutable **Tuples** (`tuple`) and perform multi-variable **Tuple Unpacking**.
+6. Calculate statistical aggregations using built-in functions: `len()`, `sum()`, `min()`, `max()`.
 
 ---
 
-## 1. Lists: Ordered, Mutable Collections
+## 1. Lists: Mutable Ordered Sequences
 
-A **list** is an ordered, changeable collection of items enclosed in square brackets `[...]`. Lists can contain duplicate elements and store heterogeneous (mixed) data types.
+A Python `list` is a dynamic, ordered array that can grow or shrink in memory and hold heterogeneous data types.
 
 ```python
 # Creating lists:
-product_codes = ["SKU-101", "SKU-102", "SKU-103"]
-sensor_readings = [23.4, 25.1, 22.8, 24.0]
-mixed_record = ["Server-01", 8080, True, 99.98]
-empty_list = []
+inventory = ["Laptop", "Keyboard", "Mouse", "Monitor"]
+
+# 1. Zero-based and negative indexing:
+print(inventory[0])   # "Laptop" (First element)
+print(inventory[-1])  # "Monitor" (Last element)
+
+# 2. Mutability (Modifying items directly):
+inventory[1] = "Mechanical Keyboard"
+
+# 3. Essential List Methods:
+inventory.append("Headset")             # Adds to end
+inventory.insert(1, "Webcam")           # Inserts at specific index
+inventory.extend(["USB Hub", "Cable"])  # Appends multiple items from another sequence
+
+removed_item = inventory.pop()          # Removes and returns last element ("Cable")
+inventory.remove("Webcam")              # Removes first occurrence of value
+
+# 4. Sorting:
+prices = [1299.99, 49.50, 24.99, 399.00]
+prices.sort()                           # In-place ascending sort: [24.99, 49.50, 399.00, 1299.99]
+prices.sort(reverse=True)               # Descending sort
 ```
 
 ---
 
-## 2. Indexing & Slicing Mechanics
+## 2. Advanced Sequence Slicing (`[start:stop:step]`)
 
-Python sequences use **0-based indexing** (counting from `0` to `len - 1`) and support **negative indexing** (counting backwards from `-1`).
-
-```
-List Elements:   ["Alpha", "Bravo", "Charlie", "Delta", "Echo"]
-Positive Index:     0        1         2         3        4
-Negative Index:    -5       -4        -3        -2       -1
-```
+Slicing extracts a sub-sequence without modifying the original collection:
+- `start`: The starting index (inclusive). Default is `0`.
+- `stop`: The ending index (**exclusive**). Default is `len(sequence)`.
+- `step`: Stride length. Default is `1`.
 
 ```python
-servers = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"]
+data = [10, 20, 30, 40, 50, 60, 70, 80]
 
-# Positive Indexing:
-print(servers[0])   # "Alpha" (First element)
-print(servers[2])   # "Charlie"
-
-# Negative Indexing:
-print(servers[-1])  # "Echo" (Last element)
-print(servers[-2])  # "Delta" (Second to last)
-```
-
-### Slicing Syntax: `[start : stop : step]`
-- `start`: The starting index (inclusive). Defaults to `0`.
-- `stop`: The ending index (**exclusive**). Defaults to `len(list)`.
-- `step`: The step interval. Defaults to `1`.
-
-```python
-# Sub-slice from index 1 up to (not including) index 4:
-print(servers[1:4])   # ['Bravo', 'Charlie', 'Delta']
-
-# Slicing from the beginning up to index 3:
-print(servers[:3])    # ['Alpha', 'Bravo', 'Charlie']
-
-# Slicing from index 2 to the end:
-print(servers[2:])    # ['Charlie', 'Delta', 'Echo']
-
-# Slicing with step of 2 (every second element):
-print(servers[::2])   # ['Alpha', 'Charlie', 'Echo']
-
-# Reversing a list using negative step:
-print(servers[::-1])  # ['Echo', 'Delta', 'Charlie', 'Bravo', 'Alpha']
+print(data[1:4])    # [20, 30, 40] (Indices 1, 2, 3)
+print(data[:3])     # [10, 20, 30] (First 3 elements)
+print(data[-3:])    # [60, 70, 80] (Last 3 elements)
+print(data[::2])    # [10, 30, 50, 70] (Every second element)
+print(data[::-1])   # [80, 70, 60, 50, 40, 30, 20, 10] (Reverses list)
 ```
 
 ---
 
-## 3. Essential List Methods
+## 3. List Comprehensions
+
+List comprehensions provide an idiomatic, readable, and faster way to create new lists by transforming or filtering existing iterables:
+
+$$\text{new\_list} = [\textbf{expression} \textbf{ for } \text{item} \textbf{ in } \text{iterable} \textbf{ if } \text{condition}]$$
 
 ```python
-inventory = ["Mouse", "Keyboard"]
+raw_readings = [14.2, -999.0, 18.5, 22.1, -999.0, 19.8]
 
-# 1. Adding elements:
-inventory.append("Monitor")             # ['Mouse', 'Keyboard', 'Monitor'] (Adds to end)
-inventory.insert(1, "Webcam")           # ['Mouse', 'Webcam', 'Keyboard', 'Monitor']
-inventory.extend(["Headset", "Desk"])   # Adds multiple items to end
+# 1. Filtering corrupted sensor readings (-999.0):
+clean_readings = [val for val in raw_readings if val != -999.0]
+# [14.2, 18.5, 22.1, 19.8]
 
-# 2. Removing elements:
-last_item = inventory.pop()             # Removes and returns last item ('Desk')
-first_item = inventory.pop(0)           # Removes and returns item at index 0 ('Mouse')
-inventory.remove("Webcam")              # Removes first occurrence of "Webcam"
-
-# 3. Inspecting and Sorting:
-print(len(inventory))                   # Total items count
-print(inventory.index("Monitor"))       # Returns index of item
-print(inventory.count("Keyboard"))      # Counts occurrences
-
-scores = [88, 95, 72, 100, 64]
-scores.sort()                           # In-place ascending sort: [64, 72, 88, 95, 100]
-scores.sort(reverse=True)               # In-place descending sort: [100, 95, 88, 72, 64]
-```
-
-### ⚠️ Referencing vs. Copying (`.copy()`)
-```python
-list_a = [1, 2, 3]
-list_b = list_a         # ❌ Copies REFERENCE only! Modifying list_b mutates list_a!
-list_c = list_a.copy()  # ✅ Creates an independent shallow copy
+# 2. Transforming data (Convert Celsius to Fahrenheit):
+readings_f = [(c * 9/5) + 32 for c in clean_readings]
+# [57.56, 65.3, 71.78, 67.64]
 ```
 
 ---
 
-## 4. Tuples: Ordered, Immutable Sequences
+## 4. Tuples: Immutable Sequences & Unpacking
 
-A **tuple** is defined with parentheses `(...)`. Unlike lists, tuples are **immutable**—once created, their elements cannot be changed, added, or removed.
+A **tuple** is an immutable sequence defined with parentheses `( )`. Once initialized, its elements **cannot** be added, modified, or removed.
 
-```python
-# Defining tuples:
-server_location = ("US-East", "Rack-4B", 42)
-rgb_primary = (255, 0, 0)
-single_element_tuple = (42,)  # Note the trailing comma!
-
-print(server_location[0])     # 'US-East'
-
-# Attempting mutation raises an error:
-# server_location[0] = "US-West" # ❌ TypeError: 'tuple' object does not support item assignment
-```
-
-### Why Use Tuples Over Lists?
-1. **Data Integrity**: Guarantees fixed configurations or constants cannot be altered accidentally at runtime.
-2. **Performance**: Tuples use less memory and are faster to allocate than dynamic lists.
-3. **Tuple Unpacking**: Unpack multiple values cleanly in a single assignment:
-   ```python
-   region, rack, port = server_location
-   print(f"Region: {region} | Port: {port}")
-   ```
-
----
-
-## 5. List Comprehensions
-
-List comprehensions offer a concise, Pythonic syntax for creating new lists by transforming or filtering existing iterables.
-
-**Basic Syntax**: `[expression for item in iterable]`  
-**Filtered Syntax**: `[expression for item in iterable if condition]`
+### Why use Tuples over Lists?
+1. **Data Integrity**: Guarantees fixed records (e.g. `(latitude, longitude)` or database row records) cannot be accidentally altered.
+2. **Performance & Memory**: Tuples consume less memory and allocate faster than dynamic lists.
 
 ```python
-raw_prices = [10.0, 25.0, 50.0, 100.0]
+# Fixed geographic coordinate tuple:
+server_location = (37.7749, -122.4194, "San Francisco DC-1")
 
-# Traditional loop:
-taxed_prices = []
-for p in raw_prices:
-    taxed_prices.append(p * 1.08)
+# Tuple Unpacking (Destructuring):
+lat, lon, facility_name = server_location
+print(f"DC Name: {facility_name} (Lat: {lat}, Lon: {lon})")
 
-# Pythonic List Comprehension:
-taxed_prices = [p * 1.08 for p in raw_prices]            # [10.8, 27.0, 54.0, 108.0]
-
-# With condition filter (only include prices >= $50):
-expensive_taxed = [p * 1.08 for p in raw_prices if p >= 50.0]  # [54.0, 108.0]
+# Swapping two variables in a single line using tuple packing/unpacking:
+x, y = 10, 20
+x, y = y, x   # x is now 20, y is now 10!
 ```
 
 ---
 
 ## 💻 Code Example & Reference
 
-See the full working code for this lesson in [Lesson_06_Lists_And_Tuples.py](file:///C:/Users/asiro/Desktop/Capstone/Python/Testing/Level_1_Beginner/Lesson_06_Lists_And_Tuples.py):
+The following real-life program models an **Algorithmic Stock Trading Day Analytics & Outlier Engine**, combining all list, tuple, and aggregation concepts taught in this lesson:
 
 ```python
-# Student Grade Analytics
-exam_scores = [78, 92, 85, 64, 98, 89, 74, 91]
+# =====================================================================
+# REAL-WORLD SYSTEM: High-Frequency Stock Market Analytics Engine
+# =====================================================================
 
-total_students = len(exam_scores)
-class_average = sum(exam_scores) / total_students
-top_score = max(exam_scores)
-lowest_score = min(exam_scores)
+print("=" * 70)
+print(f"{'📊 FINANCIAL EQUITIES TICKER ANALYTICS ENGINE':^70}")
+print("=" * 70)
 
-# Filter honor roll scores (>= 90) using list comprehension:
-honor_roll = [s for s in exam_scores if s >= 90]
+# 1. Historical Trade Records stored as immutable (timestamp, price, volume) tuples
+trade_records = [
+    ("09:30:00", 182.50, 500),
+    ("09:30:15", 183.10, 1200),
+    ("09:30:30", 182.90, 800),
+    ("09:31:00", 184.25, 2500),
+    ("09:31:45", 183.80, 450),
+    ("09:32:10", 185.00, 3100),
+    ("09:32:50", 184.60, 600),
+    ("09:33:15", 185.75, 4200),
+]
 
-print(f"Enrollment:    {total_students} students")
-print(f"Class Average: {class_average:.2f}%")
-print(f"Score Range:   {lowest_score}% to {top_score}%")
-print(f"Honor Roll:    {honor_roll} ({len(honor_roll)} students)")
+# 2. Extracting Prices and Volumes using List Comprehensions & Unpacking (Lesson 6)
+all_prices = [price for _, price, _ in trade_records]
+all_volumes = [volume for _, _, volume in trade_records]
+
+# 3. Built-in Statistical Aggregations
+total_trades = len(trade_records)
+total_volume_traded = sum(all_volumes)
+min_session_price = min(all_prices)
+max_session_price = max(all_prices)
+open_price = trade_records[0][1]      # First trade price
+close_price = trade_records[-1][1]    # Last trade price
+
+# Volume-Weighted Average Price (VWAP) Calculation: sum(price * volume) / total_volume
+vwap_numerator = sum([price * volume for _, price, volume in trade_records])
+session_vwap = vwap_numerator / total_volume_traded
+
+# 4. Slicing Top High-Volume Trades (Lessons 3 & 6)
+# Sort trades descending by volume
+sorted_by_volume = sorted(trade_records, key=lambda x: x[2], reverse=True)
+top_3_volume_trades = sorted_by_volume[:3]
+
+# 5. Formatted Market Terminal Output (Lessons 1 & 6)
+print(f"{'Metric':<35} | {'Value':>25}")
+print("-" * 70)
+print(f"{'Total Logged Trades':<35} | {total_trades:>25}")
+print(f"{'Total Shares Exchanged':<35} | {total_volume_traded:>25,}")
+print(f"{'Market Opening Price':<35} | {f'${open_price:.2f}':>25}")
+print(f"{'Market Closing Price':<35} | {f'${close_price:.2f}':>25}")
+print(f"{'Session Price Low / High':<35} | {f'${min_session_price:.2f} - ${max_session_price:.2f}':>25}")
+print(f"{'Session VWAP (Benchmark)':<35} | {f'${session_vwap:.2f}':>25}")
+print("=" * 70)
+
+print(f"{'TOP 3 HIGH-VOLUME TRANSACTIONS (WHALE TRADES)':^70}")
+print("-" * 70)
+print(f"{'Rank':<8} | {'Timestamp':^15} | {'Execution Price':>18} | {'Volume':>15}")
+print("-" * 70)
+
+for rank, (ts, price, vol) in enumerate(top_3_volume_trades, start=1):
+    print(f"{rank:<8} | {ts:^15} | {f'${price:.2f}':>18} | {f'{vol:,} shares':>15}")
+
+print("=" * 70)
 ```
+
+### 🔍 Code Explanation:
+- **Tuples for Fixed Records**: Each transaction is modeled as an immutable `(timestamp, price, volume)` tuple to ensure financial audit integrity.
+- **List Comprehensions**: Comprehensions with tuple unpacking (`[price for _, price, _ in trade_records]`) isolate pricing streams concisely without manual loops.
+- **Statistical Aggregation Functions**: `min()`, `max()`, `sum()`, and `len()` calculate high-level market metrics efficiently.
+- **Slicing**: `sorted_by_volume[:3]` extracts the top 3 highest-volume transactions.
 
 ---
 
-## 📝 Quick Exercise: Warehouse Inventory Fulfillment Analytics
+## 📝 Quick Exercise: Academic Class Grade Registry & Performance Analyzer
 
 ### 🏢 Real-Life Scenario
-You are developing the weekly logistics and demand forecasting report for an e-commerce fulfillment warehouse. The operations team tracks daily shipped unit counts for a flagship consumer electronic SKU across the 7 days of the operational week. The system must analyze sales volume, identify peak and lowest volume days, isolate above-average fulfillment spikes, and project next week's initial restock requirement.
+You are developing the semester grading and academic standing module for a university computer science department. The professor enters student names along with their raw exam scores. The program filters passing students, computes statistical class metrics (mean, highest, lowest score), detects honor roll qualifiers, and outputs a ranked grade leaderboard.
 
 ### 📋 Requirements
-1. Declare the data collections:
-   - `weekly_sales`: `[145, 230, 180, 310, 260, 420, 195]` (shipped unit count list)
-   - `day_names`: `("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")` (day names tuple)
-2. Compute statistical aggregates using built-in functions:
-   - `total_units = sum(weekly_sales)`
-   - `days_count = len(weekly_sales)`
-   - `average_daily_units = total_units / days_count`
-   - `max_units = max(weekly_sales)`
-   - `min_units = min(weekly_sales)`
-   - `peak_day_index = weekly_sales.index(max_units)` $\rightarrow$ `peak_day_name = day_names[peak_day_index]`
-   - `lowest_day_index = weekly_sales.index(min_units)` $\rightarrow$ `lowest_day_name = day_names[lowest_day_index]`
-3. Use a **list comprehension** to generate a new list `above_average_sales` containing only the daily sales numbers strictly greater than `average_daily_units`.
-4. Use `.copy()` and `.append()` to create a `restock_projection` list containing all 7 days plus an 8th projected restock target (`int(average_daily_units * 1.15)`).
-5. Use a `for` loop over `range(len(weekly_sales))` to print a clean day-by-day fulfillment ledger.
-6. Print the formatted supply chain summary report.
+1. Capture student records interactively:
+   - Use a `while True` loop to prompt for student records until the instructor enters `"done"`.
+   - In each iteration, capture:
+     - `student_name`: Sanitized with `.strip().title()`
+     - `score`: Cast to `float` (range 0.0 to 100.0)
+   - Store each entry as a `(student_name, score)` tuple inside a master `student_records` list.
+2. Analytics & Slicing:
+   - Compute `class_average = sum(all_scores) / len(all_scores)`.
+   - Identify `highest_score` and `lowest_score`.
+   - Use a **List Comprehension** to create a list of `honor_students` (scores $\ge 90.0$).
+   - Use a **List Comprehension** to create a list of `failing_students` (scores $< 60.0$).
+3. Sort the `student_records` in descending order of score.
+4. Output the complete academic performance summary and ranked leaderboard.
 
 > [!IMPORTANT]
-> **Strict Constraint**: Use **only** concepts covered in Lessons 1 through 6 (variables, primitives, `input()`, numbers, strings, conditionals, loops, `range()`, lists, tuples, indexing, slicing, list methods, list comprehensions, aggregate functions `sum()`, `len()`, `min()`, `max()`, f-strings, and `print()`). Do **not** use dictionaries, sets, or functions.
+> **Cumulative Constraint**: Combine concepts from **Lessons 1 through 6** (variables, types, input sanitization, casting, arithmetic, compound conditionals, while/for loops, lists, tuples, slicing, list comprehensions, `min`/`max`/`sum`/`len`, and f-strings).
 
 ### 🎯 Expected Output
+*(Assuming the instructor inputs: `Elena Rostova` 94.5, `Marcus Vance` 78.0, `Sarah Connor` 98.0, `David Kim` 56.5, `Chloe Price` 88.0, and `done`)*
+
 ```text
+Enter Student Name (or 'done' to finish): Elena Rostova
+Enter Exam Score (0-100): 94.5
+
+Enter Student Name (or 'done' to finish): Marcus Vance
+Enter Exam Score (0-100): 78.0
+
+Enter Student Name (or 'done' to finish): Sarah Connor
+Enter Exam Score (0-100): 98.0
+
+Enter Student Name (or 'done' to finish): David Kim
+Enter Exam Score (0-100): 56.5
+
+Enter Student Name (or 'done' to finish): Chloe Price
+Enter Exam Score (0-100): 88.0
+
+Enter Student Name (or 'done' to finish): done
+
 ==================================================
-      WAREHOUSE WEEKLY FULFILLMENT REPORT         
+           CLASSROOM GRADE ANALYTICS              
 ==================================================
-DAILY SHIPMENT LEDGER:
-- Monday   : 145 units
-- Tuesday  : 230 units
-- Wednesday: 180 units
-- Thursday : 310 units
-- Friday   : 260 units
-- Saturday : 420 units
-- Sunday   : 195 units
+Total Students:    5
+Class Average:     83.00%
+Top Exam Score:    98.00%
+Lowest Exam Score: 56.50%
+Honor Roll Count:  2 student(s) (>=90%)
+Failing Count:     1 student(s) (<60%)
 --------------------------------------------------
-WEEKLY PERFORMANCE METRICS:
-Total Volume:       1,740 units
-Daily Average:      248.57 units/day
-Peak Fulfillment:   Saturday (420 units)
-Lowest Fulfillment: Monday (145 units)
---------------------------------------------------
-High Volume Days (>Avg): [310, 260, 420] (3 days)
-Next Day Projected Need: 285 units
+RANKED LEADERBOARD:
+  #1: Sarah Connor         - 98.00% [HONOR ROLL 🌟]
+  #2: Elena Rostova        - 94.50% [HONOR ROLL 🌟]
+  #3: Chloe Price          - 88.00%
+  #4: Marcus Vance         - 78.00%
+  #5: David Kim            - 56.50% [ACADEMIC WARNING ⚠️]
 ==================================================
 ```
 
@@ -238,77 +251,64 @@ Next Day Projected Need: 285 units
 <summary><b>🔍 View Exercise Solution</b></summary>
 
 ```python
-# 1. Declare weekly data collections
-weekly_sales = [145, 230, 180, 310, 260, 420, 195]
-day_names = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+# 1. Interactive Collection Loop (Lessons 1-6)
+student_records = []
 
-# 2. Compute aggregate metrics
-total_units = sum(weekly_sales)
-days_count = len(weekly_sales)
-average_daily_units = total_units / days_count
-max_units = max(weekly_sales)
-min_units = min(weekly_sales)
+while True:
+    name_input = input("Enter Student Name (or 'done' to finish): ").strip().title()
+    if name_input.lower() == "done":
+        if len(student_records) == 0:
+            print("❌ Must enter at least one student.")
+            continue
+        break
 
-peak_day_index = weekly_sales.index(max_units)
-peak_day_name = day_names[peak_day_index]
+    score_input = float(input("Enter Exam Score (0-100): "))
+    if 0.0 <= score_input <= 100.0:
+        student_records.append((name_input, score_input))
+    else:
+        print("❌ Score must be between 0 and 100.")
 
-lowest_day_index = weekly_sales.index(min_units)
-lowest_day_name = day_names[lowest_day_index]
+# 2. Extract Scores and Compute Metrics (Lesson 6)
+scores_list = [score for _, score in student_records]
 
-# 3. List comprehension for above-average days
-above_average_sales = [units for units in weekly_sales if units > average_daily_units]
+total_students = len(student_records)
+class_average = sum(scores_list) / total_students
+top_score = max(scores_list)
+lowest_score = min(scores_list)
 
-# 4. Projected demand with copy and append
-projected_target = int(average_daily_units * 1.15)
-restock_projection = weekly_sales.copy()
-restock_projection.append(projected_target)
+honor_students = [name for name, score in student_records if score >= 90.0]
+failing_students = [name for name, score in student_records if score < 60.0]
 
-# 5. Output formatted report
+# 3. Sort Descending by Score (Lesson 6)
+sorted_records = sorted(student_records, key=lambda x: x[1], reverse=True)
+
+# 4. Formatted Display Output (Lessons 1 & 6)
+print("\n==================================================")
+print("           CLASSROOM GRADE ANALYTICS              ")
 print("==================================================")
-print("      WAREHOUSE WEEKLY FULFILLMENT REPORT         ")
-print("==================================================")
-print("DAILY SHIPMENT LEDGER:")
-for i in range(len(weekly_sales)):
-    print(f"- {day_names[i]:<9}: {weekly_sales[i]} units")
+print(f"Total Students:    {total_students}")
+print(f"Class Average:     {class_average:.2f}%")
+print(f"Top Exam Score:    {top_score:.2f}%")
+print(f"Lowest Exam Score: {lowest_score:.2f}%")
+print(f"Honor Roll Count:  {len(honor_students)} student(s) (>=90%)")
+print(f"Failing Count:     {len(failing_students)} student(s) (<60%)")
+print("--------------------------------------------------")
+print("RANKED LEADERBOARD:")
 
-print("--------------------------------------------------")
-print("WEEKLY PERFORMANCE METRICS:")
-print(f"Total Volume:       {total_units:,} units")
-print(f"Daily Average:      {average_daily_units:.2f} units/day")
-print(f"Peak Fulfillment:   {peak_day_name} ({max_units} units)")
-print(f"Lowest Fulfillment: {lowest_day_name} ({min_units} units)")
-print("--------------------------------------------------")
-print(f"High Volume Days (>Avg): {above_average_sales} ({len(above_average_sales)} days)")
-print(f"Next Day Projected Need: {projected_target} units")
+for rank, (name, score) in enumerate(sorted_records, start=1):
+    tag = ""
+    if score >= 90.0:
+        tag = " [HONOR ROLL 🌟]"
+    elif score < 60.0:
+        tag = " [ACADEMIC WARNING ⚠️]"
+
+    print(f"  #{rank}: {name:<20} - {score:.2f}%{tag}")
+
 print("==================================================")
 ```
-</details>
 
----
-
-## 🧠 Self-Check Quiz
-
-1. **What is the result of `['a', 'b', 'c', 'd', 'e'][1:4]`?**
-   - A) `['a', 'b', 'c']`
-   - B) `['b', 'c', 'd']`
-   - C) `['b', 'c', 'd', 'e']`
-   - D) `['c', 'd']`
-
-2. **If `x = [10, 20]`, what is the difference between `y = x` and `y = x.copy()`?**
-   - A) `y = x` copies values, while `y = x.copy()` copies reference.
-   - B) `y = x` assigns a reference to the same list; modifying `y` modifies `x`. `x.copy()` creates an independent copy.
-   - C) There is no difference.
-   - D) `x.copy()` converts the list into a tuple.
-
-3. **What is the output of `[n * 2 for n in [1, 2, 3, 4] if n % 2 == 0]`?**
-   - A) `[2, 4, 6, 8]`
-   - B) `[4, 8]`
-   - C) `[2, 6]`
-   - D) `[4]`
-
-<details>
-<summary><b>View Answers</b></summary>
-1: B (Slicing 1:4 captures indices 1, 2, 3: 'b', 'c', 'd')<br>
-2: B (Direct assignment creates an alias pointing to the exact same list in memory)<br>
-3: B (Filter keeps only even numbers [2, 4], then doubles them: [4, 8])
+**Explanation of the Solution:**
+- `student_records` collects `(name, score)` tuples dynamically during a `while` loop.
+- List comprehensions extract score lists and filter students based on performance thresholds.
+- `sorted(..., key=lambda x: x[1], reverse=True)` orders students by highest score for the leaderboard.
 </details>

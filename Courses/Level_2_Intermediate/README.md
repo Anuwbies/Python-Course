@@ -6,17 +6,17 @@ Welcome to **Level 2**! This course transitions you from writing simple procedur
 
 ## 📊 Level 2 Progress Tracker
 
-| Lesson / Milestone | Lesson Title & Detailed Guide | Exercises | Quiz | Status |
-| :--- | :--- | :---: | :---: | :---: |
-| **Lesson 1** | [01_Advanced_OOP_Inheritance.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/01_Advanced_OOP_Inheritance.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 2** | [02_Properties_And_Dunder_Methods.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/02_Properties_And_Dunder_Methods.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 3** | [03_Abstract_Base_Classes.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/03_Abstract_Base_Classes.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 4** | [04_Custom_Exceptions.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/04_Custom_Exceptions.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 5** | [05_Iterators_And_Generators.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/05_Iterators_And_Generators.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 6** | [06_Decorators_And_Closures.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/06_Decorators_And_Closures.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 7** | [07_Context_Managers.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/07_Context_Managers.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 8** | [08_Type_Hints_And_Testing.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/08_Type_Hints_And_Testing.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Capstone** | **Level 2 Capstone: Extensible Task & Plugin Engine** | — | — | `PENDING` ⏳ |
+| Lesson / Milestone | Lesson Title & Detailed Guide | Exercises | Status |
+| :--- | :--- | :---: | :---: |
+| **Lesson 1** | [01_Advanced_OOP_Inheritance.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/01_Advanced_OOP_Inheritance.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 2** | [02_Properties_And_Dunder_Methods.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/02_Properties_And_Dunder_Methods.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 3** | [03_Abstract_Base_Classes.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/03_Abstract_Base_Classes.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 4** | [04_Custom_Exceptions.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/04_Custom_Exceptions.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 5** | [05_Iterators_And_Generators.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/05_Iterators_And_Generators.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 6** | [06_Decorators_And_Closures.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/06_Decorators_And_Closures.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 7** | [07_Context_Managers.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/07_Context_Managers.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 8** | [08_Type_Hints_And_Testing.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/08_Type_Hints_And_Testing.md) | [x] | `COMPLETED` ✅ |
+| **Capstone** | **Level 2 Capstone: Extensible Task & Plugin Engine** | — | `PENDING` ⏳ |
 
 ---
 

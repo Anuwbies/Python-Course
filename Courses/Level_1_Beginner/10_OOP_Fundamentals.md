@@ -1,394 +1,362 @@
 # Lesson 10: Object-Oriented Programming (OOP) Fundamentals
 
-Object-Oriented Programming (OOP) is a fundamental programming paradigm that organizes complex software by bundling **State** (attributes and data) and **Behavior** (methods and operations) together into modular units called **Objects**.
+Throughout the previous lessons, we used procedural functions and individual dictionaries/lists. However, as software systems grow complex, modeling business entities by grouping related data (state) and functions (behavior) together becomes essential. In this milestone lesson, you will master Python's **Object-Oriented Programming (OOP)** foundations: Classes, Instances, Constructors, Methods, and Attributes.
 
 ---
 
 ## 🎯 Learning Objectives
 By the end of this lesson, you will:
-1. Understand the core principles of OOP: **Encapsulation**, **State**, and **Behavior**.
-2. Differentiate between a **Class** (the blueprint/type) and an **Object** (the concrete instance).
-3. Initialize object state using the `__init__` constructor method.
-4. Master the `self` parameter and Python's instance binding mechanism.
-5. Distinguish between **Instance Attributes** and **Class Attributes**.
-6. Implement state-mutating instance methods with built-in validation checks.
-7. Customize readable string representations using the `__str__` dunder method.
-8. Design collaborative multi-object systems (e.g. manager classes coordinating collections of objects).
+1. Understand the core principles of Object-Oriented Programming and Domain Modeling.
+2. Define custom classes using the `class` keyword.
+3. Initialize object state using the `__init__()` constructor and understand the `self` reference.
+4. Distinguish between **Instance Attributes** (unique per object) and **Class Attributes** (shared across all instances).
+5. Implement Instance Methods that inspect and modify object state.
+6. Provide readable string representations of objects using `__str__()` and `__repr__()`.
 
 ---
 
-## 1. Classes vs. Objects: The Blueprint Model
+## 1. Classes vs. Instances
 
-- **Class**: A user-defined data type and structural blueprint defining what data an entity stores and what operations it can perform (e.g., `BankAccount`, `UserAccount`, `DeliveryVehicle`).
-- **Object (Instance)**: A concrete, independent entity instantiated in computer memory based on that blueprint.
-
-```
-       [ CLASS: BankAccount ]  <--- Blueprint
-                 │
-   ┌─────────────┴─────────────┐
-   ▼                           ▼
-[ Object 1: acc_alice ]     [ Object 2: acc_bob ]
-owner: "Alice"              owner: "Bob"
-balance: $2,500.00          balance: $140.00
-```
-
----
-
-## 2. Defining Classes, `__init__`, and `self`
-
-The `__init__` method (called the **Constructor**) executes automatically whenever a new object is created. Its purpose is to initialize the instance's unique attributes.
+- **Class**: The blueprint or template that defines properties and behaviors (e.g. `BankAccount`).
+- **Instance (Object)**: An individual, concrete realization created in memory from that blueprint (e.g. `alice_account = BankAccount("Alice", 1000.0)`).
 
 ```python
 class ServerNode:
-    # Constructor:
-    def __init__(self, hostname: str, ip_address: str, ram_gb: int):
-        # self.attribute_name binds the data to THIS specific instance:
+    """Blueprint representing a cloud computing node."""
+    
+    # Class Attribute (Shared by ALL ServerNode instances):
+    CLOUD_REGION = "us-east-1"
+    
+    # Constructor: Runs automatically when a new object is instantiated
+    def __init__(self, hostname: str, ip_address: str, ram_gb: float):
+        # Instance Attributes (Unique to each specific server):
         self.hostname = hostname
         self.ip_address = ip_address
         self.ram_gb = ram_gb
-        self.is_online = False  # Default initial state
+        self.is_active = True
+        self.active_connections = 0
 
-    # Instance method:
-    def boot(self):
-        self.is_online = True
-        print(f"🚀 Server {self.hostname} ({self.ip_address}) is now ONLINE.")
+    # Instance Method:
+    def connect_client(self) -> bool:
+        """Increments active connections if the server is active."""
+        if not self.is_active:
+            print(f"❌ Connection rejected: {self.hostname} is offline.")
+            return False
+        self.active_connections += 1
+        return True
 
-# Instantiating objects:
-node1 = ServerNode("web-prod-01", "10.0.0.1", 32)
-node2 = ServerNode("db-primary-01", "10.0.0.2", 128)
-
-node1.boot()
-print(f"{node2.hostname} has {node2.ram_gb} GB RAM. Online: {node2.is_online}")
+    def shutdown(self) -> None:
+        """Transitions server node to offline status."""
+        self.is_active = False
+        self.active_connections = 0
+        print(f"🛑 Server {self.hostname} has been cleanly shut down.")
 ```
-
-### 🔍 Demystifying `self`
-- `self` is a reference to the **specific instance** that invoked the method.
-- When you execute `node1.boot()`, Python behind the scenes translates it to `ServerNode.boot(node1)`.
-- `self` allows methods on an object to read and mutate that specific object's private memory state.
 
 ---
 
-## 3. Instance Attributes vs. Class Attributes
+## 2. The `self` Parameter Explained
 
-- **Instance Attributes**: Bound to `self`. Each object possesses its own independent copy (e.g. `self.balance`).
-- **Class Attributes**: Defined directly inside the class body outside any method. Shared equally by **all** instances of the class.
+In Python, every instance method must receive `self` as its first parameter. 
+
+When you write:
+```python
+node1 = ServerNode("node-01", "10.0.0.1", 32.0)
+node1.connect_client()
+```
+Python automatically translates this invocation to:
+```python
+ServerNode.connect_client(node1) # 'self' references node1 in memory
+```
+
+---
+
+## 3. Class Attributes vs. Instance Attributes
 
 ```python
 class Employee:
-    # Class Attribute (Shared by all employees):
-    company_name = "Apex Global Technologies"
-    annual_bonus_rate = 0.08
+    # Class Attribute: Shared across the company
+    COMPANY_NAME = "Apex Technologies Inc."
+    TOTAL_EMPLOYEES = 0 # Counter for all instances created
 
-    def __init__(self, name: str, salary: float):
-        # Instance Attributes (Unique per employee):
+    def __init__(self, name: str, role: str):
+        # Instance Attributes: Unique to this employee
         self.name = name
-        self.salary = salary
+        self.role = role
+        Employee.TOTAL_EMPLOYEES += 1
 
-emp1 = Employee("Sarah Connor", 95000.0)
-emp2 = Employee("Marcus Vance", 85000.0)
+emp1 = Employee("Elena", "Lead Architect")
+emp2 = Employee("Marcus", "DevOps Engineer")
 
-print(emp1.company_name)  # 'Apex Global Technologies'
-print(emp2.company_name)  # 'Apex Global Technologies'
+print(emp1.COMPANY_NAME)        # "Apex Technologies Inc."
+print(Employee.TOTAL_EMPLOYEES) # 2 (Updated by both instances)
 ```
 
 ---
 
-## 4. The Magic `__str__` Dunder Method
+## 4. String Representations: `__str__` and `__repr__`
 
-By default, passing an object to `print(node1)` prints an unhelpful memory address like `<__main__.ServerNode object at 0x7f8a1b>`.
-
-Implementing the `__str__(self)` dunder (*double underscore*) method tells Python how to format the object as a user-friendly string:
+By default, printing an object outputs its raw memory pointer (`<__main__.Employee object at 0x7f8a10>`). Implementing special representation methods makes objects readable and easy to debug:
 
 ```python
-class BankAccount:
-    def __init__(self, account_id: str, owner: str, initial_deposit: float = 0.0):
-        self.account_id = account_id
-        self.owner = owner
-        self.balance = float(initial_deposit)
+class Product:
+    def __init__(self, sku: str, name: str, price: float):
+        self.sku = sku
+        self.name = name
+        self.price = price
 
-    def deposit(self, amount: float) -> bool:
-        if amount <= 0:
-            print("[ERROR] Deposit must be positive.")
-            return False
-        self.balance += amount
-        return True
-
-    def withdraw(self, amount: float) -> bool:
-        if amount <= 0 or amount > self.balance:
-            print("[ERROR] Invalid or insufficient funds.")
-            return False
-        self.balance -= amount
-        return True
-
-    # User-facing string representation:
+    # __str__: User-friendly string for print() and str()
     def __str__(self) -> str:
-        return f"BankAccount[{self.account_id}] Owner: {self.owner:<15} | Balance: ${self.balance:,.2f}"
+        return f"{self.name} (${self.price:.2f}) [{self.sku}]"
 
-acc = BankAccount("ACC-902", "Elena Rostova", 1500.00)
-print(acc)  # Output: BankAccount[ACC-902] Owner: Elena Rostova   | Balance: $1,500.00
-```
+    # __repr__: Unambiguous developer representation
+    def __repr__(self) -> str:
+        return f"Product(sku='{self.sku}', name='{self.name}', price={self.price})"
 
----
-
-## 5. Object Collaboration: Multi-Class Architectures
-
-In real systems, objects interact with and contain collections of other objects:
-
-```python
-class Department:
-    def __init__(self, department_name: str):
-        self.department_name = department_name
-        self.members = []  # List holding Employee objects
-
-    def add_employee(self, emp: Employee):
-        self.members.append(emp)
-
-    def calculate_total_payroll(self) -> float:
-        return sum(emp.salary for emp in self.members)
+item = Product("SKU-99", "Mechanical Keyboard", 129.99)
+print(item)        # Calls __str__ -> Mechanical Keyboard ($129.99) [SKU-99]
+print(repr(item))  # Calls __repr__ -> Product(sku='SKU-99', name='Mechanical Keyboard', price=129.99)
 ```
 
 ---
 
 ## 💻 Code Example & Reference
 
-See the full working code for this lesson in [Lesson_10_OOP_Fundamentals.py](file:///C:/Users/asiro/Desktop/Capstone/Python/Testing/Level_1_Beginner/Lesson_10_OOP_Fundamentals.py):
+The following real-life program models a **Commercial Airline Passenger Flight & Seat Booking Management System**, using all OOP and procedural concepts taught across Level 1:
 
 ```python
-# Student Course Registry System
-class Course:
-    def __init__(self, course_code: str, title: str, max_capacity: int = 30):
-        self.course_code = course_code
-        self.title = title
-        self.max_capacity = max_capacity
-        self.enrolled_students = []
+# =====================================================================
+# REAL-WORLD SYSTEM: Commercial Airline Flight & Reservation System
+# =====================================================================
 
-    def enroll(self, student_name: str) -> bool:
-        if len(self.enrolled_students) >= self.max_capacity:
-            print(f"[ERROR] Cannot enroll {student_name}: Course {self.course_code} is FULL.")
-            return False
-        self.enrolled_students.append(student_name)
-        return True
+class Passenger:
+    """Represents a ticketed flight passenger."""
+    
+    def __init__(self, passport_no: str, full_name: str, is_frequent_flyer: bool = False):
+        self.passport_no = passport_no
+        self.full_name = full_name
+        self.is_frequent_flyer = is_frequent_flyer
+        self.checked_bags = 0
+
+    def add_checked_bag(self) -> None:
+        self.checked_bags += 1
 
     def __str__(self) -> str:
-        return f"[{self.course_code}] {self.title} - Enrolled: {len(self.enrolled_students)}/{self.max_capacity}"
+        status = "★ Gold Member" if self.is_frequent_flyer else "Standard Passenger"
+        return f"{self.full_name} ({self.passport_no}) - {status} [{self.checked_bags} bags]"
 
-cs101 = Course("CS-101", "Intro to Python Programming", max_capacity=2)
-cs101.enroll("Alex")
-cs101.enroll("Maria")
-cs101.enroll("Jordan")  # Exceeds capacity!
-print(cs101)
+
+class CommercialFlight:
+    """Manages an airliner flight route, capacity, and passenger manifest."""
+    
+    AIRLINE_NAME = "Apex Continental Airways" # Class Attribute
+    
+    def __init__(self, flight_number: str, origin: str, destination: str, seat_capacity: int, ticket_price: float):
+        self.flight_number = flight_number
+        self.origin = origin.upper()
+        self.destination = destination.upper()
+        self.seat_capacity = seat_capacity
+        self.ticket_price = ticket_price
+        self.passengers: list[Passenger] = []
+
+    @property
+    def seats_available(self) -> int:
+        return self.seat_capacity - len(self.passengers)
+
+    def book_passenger(self, passenger: Passenger) -> tuple[bool, str]:
+        """Attempts to assign a passenger to this flight."""
+        if self.seats_available <= 0:
+            return False, f"Flight {self.flight_number} is FULL. Booking rejected."
+            
+        # Check duplicate booking
+        for existing in self.passengers:
+            if existing.passport_no == passenger.passport_no:
+                return False, f"Passenger {passenger.passport_no} is already booked on this flight."
+                
+        self.passengers.append(passenger)
+        return True, f"Passenger {passenger.full_name} confirmed on flight {self.flight_number}."
+
+    def calculate_gross_revenue(self) -> float:
+        return len(self.passengers) * self.ticket_price
+
+    def print_manifest(self) -> None:
+        print("\n" + "=" * 65)
+        print(f"{CommercialFlight.AIRLINE_NAME:^65}")
+        print(f"{'OFFICIAL PASSENGER FLIGHT MANIFEST':^65}")
+        print("=" * 65)
+        print(f"{'Flight:':<20} {self.flight_number} ({self.origin} -> {self.destination})")
+        print(f"{'Capacity:':<20} {len(self.passengers)} / {self.seat_capacity} seats booked")
+        print(f"{'Ticket Fare:':<20} ${self.ticket_price:,.2f}")
+        print(f"{'Gross Flight Revenue:':<20} ${self.calculate_gross_revenue():,.2f}")
+        print("-" * 65)
+        print("PASSENGER ROSTER:")
+        if not self.passengers:
+            print("  (No passengers booked)")
+        else:
+            for idx, p in enumerate(self.passengers, start=1):
+                print(f"  {idx:02d}. {p}")
+        print("=" * 65)
+
+
+# Executing the flight booking system
+flight = CommercialFlight("APX-842", "JFK", "LHR", seat_capacity=3, ticket_price=850.00)
+
+p1 = Passenger("US-90182", "Elena Rostova", is_frequent_flyer=True)
+p1.add_checked_bag()
+p1.add_checked_bag()
+
+p2 = Passenger("UK-34190", "Marcus Vance", is_frequent_flyer=False)
+p3 = Passenger("CA-88123", "Sarah Connor", is_frequent_flyer=True)
+p4 = Passenger("FR-55412", "David Kim", is_frequent_flyer=False) # Exceeds capacity
+
+for p in (p1, p2, p3, p4):
+    success, msg = flight.book_passenger(p)
+    tag = "✅" if success else "❌"
+    print(f"{tag} {msg}")
+
+flight.print_manifest()
 ```
+
+### 🔍 Code Explanation:
+- **Entity Modeling**: `Passenger` and `CommercialFlight` encapsulate independent responsibilities.
+- **Composition**: `CommercialFlight` contains a list of `Passenger` objects, demonstrating object relationships.
+- **Class Attributes**: `AIRLINE_NAME` is shared globally by all flight instances.
+- **State Validation**: `book_passenger` validates seat capacity limits and enforces passport uniqueness before mutating the internal passenger list.
 
 ---
 
-## 📝 Quick Exercise: Commercial Fleet Logistics & Telematics System
+## 📝 Quick Exercise: Hospital Pharmacy Prescription & Inventory Control Engine
 
 ### 🏢 Real-Life Scenario
-You are developing the fleet tracking and telematics management engine for a regional parcel logistics company. The company needs an Object-Oriented system comprising a `DeliveryVehicle` class (modeling vehicle odometer, fuel capacity, fuel consumption, trip tracking, and maintenance alerts) and a `FleetManager` class (coordinating vehicles across the depot and producing executive fleet status summaries).
+You are developing the pharmacy dispensing and prescription validation system for a regional hospital network. The system models pharmaceutical medications (`Medication`) and patients (`Patient`), tracking available dosages, prescription dispensing, inventory depletion, and patient allergic reactions.
 
 ### 📋 Requirements
-1. Create a `DeliveryVehicle` class:
-   - **`__init__(self, vehicle_id: str, model: str, max_payload_kg: float, fuel_capacity_l: float)`**:
-     - `self.vehicle_id = vehicle_id`
-     - `self.model = model`
-     - `self.max_payload_kg = float(max_payload_kg)`
-     - `self.fuel_capacity_l = float(fuel_capacity_l)`
-     - `self.current_fuel_l = float(fuel_capacity_l)` (starts with a full tank)
-     - `self.odometer_km = 0.0`
-     - `self.trip_count = 0`
-     - `self.maintenance_due = False`
-   - **`refuel(self, liters: float) -> float`**:
-     - If `liters <= 0`: print error `"[ERROR] Refuel amount must be positive."` and return `self.current_fuel_l`.
-     - Adds `liters`, capping at `self.fuel_capacity_l`.
-     - Returns `self.current_fuel_l`.
-   - **`record_trip(self, distance_km: float, fuel_consumed_l: float) -> bool`**:
-     - If `distance_km <= 0` or `fuel_consumed_l <= 0`:
-       - Print `"[ERROR] Invalid trip metrics."` and return `False`.
-     - If `fuel_consumed_l > self.current_fuel_l`:
-       - Print `f"[ERROR] Insufficient Fuel in {self.vehicle_id} for trip!"` and return `False`.
-     - Deduct `fuel_consumed_l` from `self.current_fuel_l`.
-     - Add `distance_km` to `self.odometer_km`.
-     - Increment `self.trip_count += 1`.
-     - If `self.odometer_km >= 500.0`: set `self.maintenance_due = True`.
-     - Return `True`.
-   - **`__str__(self) -> str`**:
-     - Returns formatted status string:
-       `f"[{self.vehicle_id}] {self.model:<18} | Odo: {self.odometer_km:>6.1f} km | Fuel: {self.current_fuel_l:>5.1f}/{self.fuel_capacity_l:.1f} L | Trips: {self.trip_count} | Maint Due: {self.maintenance_due}"`
-
-2. Create a `FleetManager` class:
-   - **`__init__(self, depot_name: str)`**:
-     - `self.depot_name = depot_name`
-     - `self.vehicles = []`
-   - **`add_vehicle(self, vehicle: DeliveryVehicle) -> None`**:
-     - Appends `vehicle` to `self.vehicles`.
-   - **`print_fleet_report(self) -> None`**:
-     - Iterates through all vehicles and displays each vehicle's `__str__`.
-     - Computes and displays fleet aggregates: total fleet vehicles, total cumulative km driven, total completed trips, and a list of vehicle IDs currently requiring maintenance.
-
-3. Test the fleet:
-   - Instantiate `FleetManager("Northwest Regional Depot")`.
-   - Add 3 vehicles:
-     - `DeliveryVehicle("VAN-101", "Ford Transit High", 1500, 75.0)`
-     - `DeliveryVehicle("VAN-102", "Mercedes Sprinter", 1800, 85.0)`
-     - `DeliveryVehicle("EV-201", "Rivian Delivery Van", 1200, 100.0)`
-   - Record trips on the vehicles (simulate trips so at least one exceeds 500 km).
-   - Display the comprehensive depot fleet report.
+1. **Define the `Medication` Class**:
+   - Constructor: `__init__(self, code: str, name: str, stock_units: int, unit_cost: float)`
+   - Methods:
+     - `dispense(self, units: int) -> bool`: If `units <= self.stock_units`, deduct `units` from stock and return `True`; otherwise return `False`.
+     - `restock(self, units: int) -> None`: Adds `units` to `stock_units`.
+     - `__str__(self)`: Returns `f"[{self.code}] {self.name} - Stock: {self.stock_units} units (${self.unit_cost:.2f}/unit)"`.
+2. **Define the `Patient` Class**:
+   - Constructor: `__init__(self, patient_id: str, name: str, allergies: list[str] = None)`
+   - Instance attributes: `patient_id`, `name`, `allergies` (a `set` of allergy names converted to lowercase), and `prescriptions` (a list of active medication names).
+   - Method:
+     - `prescribe(self, med: Medication, units: int) -> tuple[bool, str]`:
+       - Check if medication name (lowercase) is in `self.allergies`. If so, return `False, "ALLERGY ALERT: Patient is allergic to this medication!"`.
+       - Attempt to dispense from `med.dispense(units)`. If stock is insufficient, return `False, "INVENTORY ERROR: Insufficient pharmacy stock"`.
+       - If safe and in stock, add medication name to `self.prescriptions` and return `True, f"Successfully dispensed {units} units of {med.name}"`.
+3. Instantiate test medications and patients, simulate prescriptions, and print out the patient medical record and remaining stock.
 
 > [!IMPORTANT]
-> **Strict Constraint**: Use **only** concepts covered across Lessons 1 through 10 (variables, primitives, strings, conditionals, loops, lists, dicts, functions, OOP classes, methods, `__init__`, `self`, `__str__`, collections of objects, f-strings, and `print()`).
+> **Cumulative Level 1 Milestone Constraint**: Combine concepts from **Lessons 1 through 10** (variables, types, input/output, casting, operators, conditionals, loops, lists, sets, dicts, functions, exception safety, and OOP classes/methods).
 
 ### 🎯 Expected Output
 ```text
-================================================================================
-           FLEET TELEMATICS REPORT - Northwest Regional Depot                   
-================================================================================
-VEHICLE STATUS LEDGER:
-- [VAN-101] Ford Transit High   | Odo:  520.0 km | Fuel:  25.0/75.0 L | Trips: 2 | Maint Due: True
-- [VAN-102] Mercedes Sprinter   | Odo:  310.5 km | Fuel:  50.0/85.0 L | Trips: 1 | Maint Due: False
-- [EV-201 ] Rivian Delivery Van | Odo:  180.0 km | Fuel:  65.0/100.0 L | Trips: 1 | Maint Due: False
---------------------------------------------------------------------------------
-FLEET-WIDE AGGREGATES:
-Total Fleet Vehicles:   3 vans
-Total Cumulative Range: 1,010.5 km
-Total Completed Trips:  4 trips
-Maintenance Due List:   ['VAN-101']
-================================================================================
+==================================================
+           HOSPITAL PHARMACY DISPENSER            
+==================================================
+Rx #1: ✅ Successfully dispensed 10 units of Amoxicillin 500mg
+Rx #2: ❌ ALLERGY ALERT: Patient is allergic to this medication!
+Rx #3: ❌ INVENTORY ERROR: Insufficient pharmacy stock
+--------------------------------------------------
+PATIENT MEDICAL RECORD:
+Patient ID:       PAT-409
+Patient Name:     Sarah Connor
+Known Allergies:  aspirin, ibuprofen
+Active Prescriptions: Amoxicillin 500mg
+--------------------------------------------------
+UPDATED PHARMACY INVENTORY:
+  - [MED-01] Amoxicillin 500mg - Stock: 40 units ($12.50/unit)
+  - [MED-02] Aspirin 100mg - Stock: 100 units ($4.00/unit)
+  - [MED-03] Ibuprofen 200mg - Stock: 5 units ($6.00/unit)
+==================================================
 ```
 
 <details>
 <summary><b>🔍 View Exercise Solution</b></summary>
 
 ```python
-class DeliveryVehicle:
-    """Represents a commercial delivery vehicle tracking telemetry and maintenance."""
-    
-    def __init__(self, vehicle_id: str, model: str, max_payload_kg: float, fuel_capacity_l: float):
-        self.vehicle_id = vehicle_id
-        self.model = model
-        self.max_payload_kg = float(max_payload_kg)
-        self.fuel_capacity_l = float(fuel_capacity_l)
-        self.current_fuel_l = float(fuel_capacity_l)
-        self.odometer_km = 0.0
-        self.trip_count = 0
-        self.maintenance_due = False
+# 1. Medication Domain Class (Lessons 1-10)
+class Medication:
+    def __init__(self, code: str, name: str, stock_units: int, unit_cost: float):
+        self.code = code
+        self.name = name
+        self.stock_units = stock_units
+        self.unit_cost = unit_cost
 
-    def refuel(self, liters: float) -> float:
-        """Adds fuel to tank, capping at max capacity."""
-        if liters <= 0:
-            print("[ERROR] Refuel amount must be positive.")
-            return self.current_fuel_l
-        self.current_fuel_l = min(self.current_fuel_l + liters, self.fuel_capacity_l)
-        return self.current_fuel_l
+    def dispense(self, units: int) -> bool:
+        if 0 < units <= self.stock_units:
+            self.stock_units -= units
+            return True
+        return False
 
-    def record_trip(self, distance_km: float, fuel_consumed_l: float) -> bool:
-        """Validates and records a delivery route trip."""
-        if distance_km <= 0 or fuel_consumed_l <= 0:
-            print("[ERROR] Invalid trip metrics.")
-            return False
-            
-        if fuel_consumed_l > self.current_fuel_l:
-            print(f"[ERROR] Insufficient fuel in {self.vehicle_id} for requested trip!")
-            return False
-
-        self.current_fuel_l -= fuel_consumed_l
-        self.odometer_km += distance_km
-        self.trip_count += 1
-        
-        if self.odometer_km >= 500.0:
-            self.maintenance_due = True
-            
-        return True
+    def restock(self, units: int) -> None:
+        if units > 0:
+            self.stock_units += units
 
     def __str__(self) -> str:
-        return (
-            f"[{self.vehicle_id:<7}] {self.model:<19} | "
-            f"Odo: {self.odometer_km:>6.1f} km | "
-            f"Fuel: {self.current_fuel_l:>5.1f}/{self.fuel_capacity_l:.1f} L | "
-            f"Trips: {self.trip_count} | "
-            f"Maint Due: {self.maintenance_due}"
-        )
+        return f"[{self.code}] {self.name} - Stock: {self.stock_units} units (${self.unit_cost:.2f}/unit)"
 
 
-class FleetManager:
-    """Manages a collection of delivery vehicles for a regional logistics depot."""
-    
-    def __init__(self, depot_name: str):
-        self.depot_name = depot_name
-        self.vehicles = []
+# 2. Patient Domain Class (Lessons 1-10)
+class Patient:
+    def __init__(self, patient_id: str, name: str, allergies: list[str] = None):
+        self.patient_id = patient_id
+        self.name = name
+        self.allergies = {a.lower() for a in allergies} if allergies else set()
+        self.prescriptions = []
 
-    def add_vehicle(self, vehicle: DeliveryVehicle) -> None:
-        """Registers a delivery vehicle into the fleet."""
-        self.vehicles.append(vehicle)
+    def prescribe(self, med: Medication, units: int) -> tuple[bool, str]:
+        # Check allergy safety (Lessons 4 & 7)
+        for allergy in self.allergies:
+            if allergy in med.name.lower():
+                return False, f"ALLERGY ALERT: Patient is allergic to this medication!"
 
-    def print_fleet_report(self) -> None:
-        """Displays formatted operational status report across the entire fleet."""
-        total_fleet_km = sum(v.odometer_km for v in self.vehicles)
-        total_trips = sum(v.trip_count for v in self.vehicles)
-        maint_list = [v.vehicle_id for v in self.vehicles if v.maintenance_due]
+        # Attempt pharmacy inventory depletion (Lesson 10)
+        if not med.dispense(units):
+            return False, "INVENTORY ERROR: Insufficient pharmacy stock"
 
-        print("================================================================================")
-        print(f"           FLEET TELEMATICS REPORT - {self.depot_name}")
-        print("================================================================================")
-        print("VEHICLE STATUS LEDGER:")
-        for v in self.vehicles:
-            print(f"- {v}")
-            
-        print("--------------------------------------------------------------------------------")
-        print("FLEET-WIDE AGGREGATES:")
-        print(f"Total Fleet Vehicles:   {len(self.vehicles)} vans")
-        print(f"Total Cumulative Range: {total_fleet_km:,.1f} km")
-        print(f"Total Completed Trips:  {total_trips} trips")
-        print(f"Maintenance Due List:   {maint_list}")
-        print("================================================================================")
+        self.prescriptions.append(med.name)
+        return True, f"Successfully dispensed {units} units of {med.name}"
 
 
-# Execution & Testing
-depot = FleetManager("Northwest Regional Depot")
+# 3. Execution Simulation
+med1 = Medication("MED-01", "Amoxicillin 500mg", stock_units=50, unit_cost=12.50)
+med2 = Medication("MED-02", "Aspirin 100mg", stock_units=100, unit_cost=4.00)
+med3 = Medication("MED-03", "Ibuprofen 200mg", stock_units=5, unit_cost=6.00)
 
-v1 = DeliveryVehicle("VAN-101", "Ford Transit High", 1500, 75.0)
-v2 = DeliveryVehicle("VAN-102", "Mercedes Sprinter", 1800, 85.0)
-v3 = DeliveryVehicle("EV-201", "Rivian Delivery Van", 1200, 100.0)
+patient = Patient("PAT-409", "Sarah Connor", allergies=["aspirin", "ibuprofen"])
 
-depot.add_vehicle(v1)
-depot.add_vehicle(v2)
-depot.add_vehicle(v3)
+print("==================================================")
+print("           HOSPITAL PHARMACY DISPENSER            ")
+print("==================================================")
 
-# Simulate trips
-v1.record_trip(280.0, 25.0)
-v1.record_trip(240.0, 25.0)  # Odometer reaches 520 km -> maintenance_due becomes True
-v2.record_trip(310.5, 35.0)
-v3.record_trip(180.0, 35.0)
+# Test 1: Safe antibiotic prescription
+ok1, msg1 = patient.prescribe(med1, 10)
+print(f"Rx #1: {'✅' if ok1 else '❌'} {msg1}")
 
-# Display fleet summary
-depot.print_fleet_report()
+# Test 2: Known allergy trigger
+ok2, msg2 = patient.prescribe(med2, 5)
+print(f"Rx #2: {'✅' if ok2 else '❌'} {msg2}")
+
+# Test 3: Insufficient inventory request (requesting 20, only 5 available)
+ok3, msg3 = patient.prescribe(med3, 20)
+print(f"Rx #3: {'✅' if ok3 else '❌'} {msg3}")
+
+print("--------------------------------------------------")
+print("PATIENT MEDICAL RECORD:")
+print(f"Patient ID:       {patient.patient_id}")
+print(f"Patient Name:     {patient.name}")
+print(f"Known Allergies:  {', '.join(sorted(patient.allergies))}")
+print(f"Active Prescriptions: {', '.join(patient.prescriptions) if patient.prescriptions else 'None'}")
+print("--------------------------------------------------")
+print("UPDATED PHARMACY INVENTORY:")
+for m in (med1, med2, med3):
+    print(f"  - {m}")
+print("==================================================")
 ```
-</details>
 
----
-
-## 🧠 Self-Check Quiz
-
-1. **What is the purpose of `__init__` in a Python class?**
-   - A) To destroy objects and reclaim memory.
-   - B) To initialize attributes and state when a new object instance is created.
-   - C) To define global variables.
-   - D) To import external libraries.
-
-2. **What does the `self` parameter represent in an instance method?**
-   - A) A reference to the specific object instance invoking the method.
-   - B) The parent Python interpreter.
-   - C) A static copy of the class blueprint.
-   - D) An optional keyword argument.
-
-3. **What method is automatically called when you pass an object to `print(my_obj)`?**
-   - A) `__init__`
-   - B) `__repr__` or `__str__`
-   - C) `__len__`
-   - D) `__call__`
-
-<details>
-<summary><b>View Answers</b></summary>
-1: B (Constructor initializes object state upon instantiation)<br>
-2: A (self provides access to the instance's unique attributes and methods)<br>
-3: B (__str__ produces the readable string representation for print())
+**Explanation of the Solution:**
+- `Medication` encapsulates stock state and guarantees that units cannot be dispensed if requested counts exceed available inventory.
+- `Patient` safeguards medication administration by checking incoming drug names against the patient's allergy set.
+- All 10 lessons of Level 1 (types, variables, operators, conditionals, loops, sequences, sets, dicts, functions, and OOP classes) work together in a unified system.
 </details>

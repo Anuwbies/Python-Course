@@ -6,17 +6,17 @@ Welcome to **Level 5**! This is the pinnacle of the Python curriculum. We peel b
 
 ## 📊 Level 5 Progress Tracker
 
-| Lesson / Milestone | Lesson Title & Detailed Guide | Exercises | Quiz | Status |
-| :--- | :--- | :---: | :---: | :---: |
-| **Lesson 1** | [01_CPython_VM_And_Bytecode.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/01_CPython_VM_And_Bytecode.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 2** | [02_Memory_Model_And_GC.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/02_Memory_Model_And_GC.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 3** | [03_Descriptors_And_Dunder_New.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/03_Descriptors_And_Dunder_New.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 4** | [04_Metaclasses_And_Class_Creation.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/04_Metaclasses_And_Class_Creation.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 5** | [05_Profiling_And_Hotspots.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/05_Profiling_And_Hotspots.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 6** | [06_Zero_Copy_And_Buffer_Protocol.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/06_Zero_Copy_And_Buffer_Protocol.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 7** | [07_Cython_And_C_Bindings.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/07_Cython_And_C_Bindings.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Lesson 8** | [08_Free_Threaded_Python_No_GIL.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/08_Free_Threaded_Python_No_GIL.md) | [ ] | [ ] | `PENDING` ⏳ |
-| **Capstone** | **Level 5 Capstone: In-Memory Redis Engine & Custom Bytecode JIT** | — | — | `PENDING` ⏳ |
+| Lesson / Milestone | Lesson Title & Detailed Guide | Exercises | Status |
+| :--- | :--- | :---: | :---: |
+| **Lesson 1** | [01_CPython_VM_And_Bytecode.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/01_CPython_VM_And_Bytecode.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 2** | [02_Memory_Model_And_GC.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/02_Memory_Model_And_GC.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 3** | [03_Descriptors_And_Dunder_New.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/03_Descriptors_And_Dunder_New.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 4** | [04_Metaclasses_And_Class_Creation.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/04_Metaclasses_And_Class_Creation.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 5** | [05_Profiling_And_Hotspots.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/05_Profiling_And_Hotspots.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 6** | [06_Zero_Copy_And_Buffer_Protocol.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/06_Zero_Copy_And_Buffer_Protocol.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 7** | [07_Cython_And_C_Bindings.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/07_Cython_And_C_Bindings.md) | [x] | `COMPLETED` ✅ |
+| **Lesson 8** | [08_Free_Threaded_Python_No_GIL.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/08_Free_Threaded_Python_No_GIL.md) | [x] | `COMPLETED` ✅ |
+| **Capstone** | **Level 5 Capstone: In-Memory Redis Engine & Custom Bytecode JIT** | — | `PENDING` ⏳ |
 
 ---
 

@@ -10,7 +10,7 @@ By the end of this lesson, you will:
 2. Understand computer memory variables, reference assignment, and dynamic typing.
 3. Distinguish and use the 4 core primitive data types (`int`, `float`, `str`, `bool`).
 4. Inspect data types dynamically using the built-in `type()` function.
-5. Format numbers and text cleanly using modern **f-strings** with precision and alignment specifiers.
+5. Format numbers and text cleanly using modern **f-strings** with precision, thousands separators, and alignment specifiers.
 6. Follow standard Python naming conventions (**PEP 8**).
 
 ---
@@ -45,8 +45,8 @@ print("2026", "08", "19", sep="-")          # Output: 2026-08-19
 print("home", "user", "docs", sep="/")       # Output: home/user/docs
 
 # Custom line ending using 'end' (suppresses the default newline):
-print("Loading data", end="...")
-print(" [DONE]")                             # Output: Loading data... [DONE]
+print("Loading server data", end="...")
+print(" [DONE]")                             # Output: Loading server data... [DONE]
 ```
 
 ---
@@ -56,147 +56,148 @@ print(" [DONE]")                             # Output: Loading data... [DONE]
 A **variable** is a symbolic name that references an object stored in computer memory.
 
 ### Static vs. Dynamic Typing
-In statically typed languages (like C++, Java, or C#), you must declare the type upfront:
+In statically typed languages (like C++ or Java), you must declare the variable type upfront:
 ```cpp
-// C++ example:
-int userAge = 25;
+int userAge = 25; // C++
 ```
 
-In **Python**, typing is **dynamic**. You do not declare types. Python determines the type at runtime based on the object assigned to the variable:
-
+In Python, typing is **dynamic**. Python infers the type automatically at runtime based on the assigned value:
 ```python
-# Assignment syntax: variable_name = value
-employee_name = "Sarah Jenkins"  # Python creates a string object in memory
-hourly_rate = 42.50              # Python creates a float object in memory
-hours_worked = 40                # Python creates an integer object in memory
-is_full_time = True              # Python creates a boolean object in memory
+user_age = 25          # Inferred as int
+user_age = "Twenty-Five" # Rebound to a str (Dynamic rebinding)
 ```
 
 ```
-Variable Name           Memory Object
-[ employee_name ] ----> "Sarah Jenkins" (str)
-[ hourly_rate   ] ----> 42.50           (float)
-[ hours_worked  ] ----> 40              (int)
-[ is_full_time  ] ----> True            (bool)
-```
-
-### Variable Naming Rules & Conventions (PEP 8)
-1. **Allowed Characters**: Letters (`a-z`, `A-Z`), digits (`0-9`), and underscores (`_`).
-2. **First Character**: Must be a letter or underscore (`_`). **Cannot start with a digit** (e.g., `1st_account` is illegal).
-3. **Case-Sensitive**: `total_cost`, `Total_Cost`, and `TOTAL_COST` are three distinct variables.
-4. **Reserved Keywords**: You cannot use Python reserved keywords as variable names (e.g., `class`, `for`, `if`, `def`, `return`, `import`, `True`, `False`, `None`).
-5. **Python Community Convention (PEP 8)**: Use `snake_case` for all variable and function names (all lowercase words joined by underscores).
-
-```python
-# ✅ Good PEP 8 snake_case names:
-student_gpa = 3.85
-max_retry_attempts = 5
-user_email_address = "developer@example.com"
-
-# ❌ Bad / Non-standard names:
-# studentGPA = 3.85        (camelCase is discouraged in standard Python)
-# 2nd_attempt = 5          (SyntaxError: cannot start with number)
-# class = "Computer Sci"   (SyntaxError: 'class' is a reserved keyword)
+Variable Name (Tag)         Memory Object
+[ user_age ] ------------> ( Integer: 25 )
 ```
 
 ---
 
-## 3. The 4 Fundamental Primitive Data Types
+## 3. The Four Core Primitive Data Types
 
-Python classifies data into types. The 4 fundamental primitives are:
+Python has four foundational primitive types that represent single values:
 
-| Data Type | Python Class | Description | Real-World Examples |
+| Type | Name | Description | Example Values |
 | :--- | :--- | :--- | :--- |
-| **Integer** | `int` | Whole numbers (positive, negative, zero) with arbitrary precision. | `150`, `-45`, `0`, `1000000` |
-| **Float** | `float` | Real numbers containing decimal points (IEEE 754 standard). | `19.99`, `-0.005`, `3.14159`, `2.0` |
-| **String** | `str` | Ordered sequence of Unicode text characters enclosed in quotes. | `"Seattle"`, `'Order-9821'`, `""` |
-| **Boolean** | `bool` | Logical truth values (`True` or `False`). Subtype of integer (`1` or `0`). | `True`, `False` |
+| `int` | Integer | Whole numbers (positive, negative, zero) with arbitrary precision | `42`, `-10`, `0`, `1_000_000` |
+| `float` | Floating-point | Real numbers with decimal fractions (IEEE 754 64-bit) | `3.14159`, `-0.005`, `2.0`, `1e-3` |
+| `str` | String | Immutable sequences of Unicode characters enclosed in quotes | `"Hello"`, `'Python 3'`, `"123"` |
+| `bool` | Boolean | Logical truth values (`True` or `False`) | `True`, `False` |
 
-### Inspecting Types with `type()`
 ```python
-order_id = 90412
-unit_price = 129.95
-product_title = "Mechanical Keyboard"
-in_stock = True
+server_nodes = 16              # int
+cpu_utilization = 78.45        # float
+cluster_region = "us-east-1"   # str
+is_healthy = True              # bool
 
-print(type(order_id))       # <class 'int'>
-print(type(unit_price))     # <class 'float'>
-print(type(product_title))  # <class 'str'>
-print(type(in_stock))       # <class 'bool'>
+# Inspecting types at runtime:
+print(type(server_nodes))      # <class 'int'>
+print(type(cpu_utilization))   # <class 'float'>
+print(type(cluster_region))    # <class 'str'>
+print(type(is_healthy))        # <class 'bool'>
 ```
 
 ---
 
-## 4. Modern String Formatting (f-strings)
+## 4. Modern String Interpolation: f-strings
 
-Introduced in Python 3.6, **f-strings** (formatted string literals) provide a concise, readable, and highly efficient way to embed variables and expressions directly inside strings.
+Introduced in Python 3.6, **Formatted String Literals (f-strings)** provide the most readable, performant way to embed expressions inside string literals.
 
-Prefix your string literal with `f` or `F`, and place variables or expressions inside curly braces `{}`:
+Prefix the string with `f` or `F` and place variables or expressions inside `{}`:
 
 ```python
-customer = "Marcus Aurelius"
-items_ordered = 3
-unit_cost = 45.50
+item = "Database Server"
+rate_per_hour = 3.456
+hours = 24
 
-# 1. Direct variable interpolation:
-print(f"Customer {customer} ordered {items_ordered} items.")
+# Basic interpolation:
+print(f"Service: {item} | Cost: ${rate_per_hour * hours}")
 
-# 2. In-line mathematical expressions:
-print(f"Subtotal: ${items_ordered * unit_cost}")
+# Decimal precision specifier (:.2f formats float to 2 decimal places):
+print(f"Daily Cost: ${rate_per_hour * hours:.2f}")  # Output: $82.94
 
-# 3. Formatting floating-point decimal precision (:.2f means 2 decimal places):
-raw_tax = 136.50 * 0.0825  # 11.26125
-print(f"Tax: ${raw_tax:.2f}")  # Output: Tax: $11.26
+# Thousands comma separator (:, or :,.2f):
+annual_budget = 1450000.758
+print(f"Budget: ${annual_budget:,.2f}")             # Output: $1,450,000.76
 
-# 4. Thousands separator with comma (:,):
-annual_revenue = 1582900.5
-print(f"Revenue: ${annual_revenue:,.2f}")  # Output: Revenue: $1,582,900.50
-
-# 5. Fixed-width padding and alignment:
-# :<15 (left-align in 15 spaces), :>10 (right-align in 10 spaces)
-print(f"{'Product':<20} | {'Price':>8}")
-print(f"{'Ergonomic Mouse':<20} | {'$49.99':>8}")
-print(f"{'USB-C Hub':<20} | {'$19.50':>8}")
+# Column alignment specifiers (< left align, > right align, ^ center align):
+print(f"{'Service':<20} | {'Status':^10} | {'Rate':>8}")
+print("-" * 44)
+print(f"{'Cloud DB':<20} | {'ONLINE':^10} | {'$3.45':>8}")
+print(f"{'Redis Cache':<20} | {'ONLINE':^10} | {'$1.20':>8}")
 ```
 
 ---
 
-## 5. Common Pitfalls to Avoid
+## 5. Python Naming Conventions (PEP 8)
 
-1. **Treating numbers as strings**:
-   ```python
-   price1 = "50"
-   price2 = "20"
-   print(price1 + price2)  # Output: "5020" (String concatenation, NOT addition!)
-   ```
-2. **Accidentally overwriting built-in functions**:
-   ```python
-   # DO NOT DO THIS:
-   # print = "Hello"
-   # print("Test")  # ❌ TypeError: 'str' object is not callable
-   ```
-3. **Mismatched quotes**:
-   Always close strings with the same quote type used to open them (`"..."` or `'...'`).
+Follow the official Python Style Guide (**PEP 8**):
+1. **Variables & Functions**: Use `snake_case` (lowercase letters with underscores):
+   - `total_price`, `max_retry_count`, `is_authenticated`
+2. **Constants**: Use `UPPER_CASE_WITH_UNDERSCORES`:
+   - `MAX_CONNECTIONS = 100`, `TAX_RATE = 0.08`
+3. **Keywords to Avoid**: Never use reserved keywords (`if`, `class`, `def`, `for`, `print`, `type`) as variable names.
 
 ---
 
 ## 💻 Code Example & Reference
 
-See the full working code for this lesson in [Lesson_01_Variables_And_Data_Types.py](file:///C:/Users/asiro/Desktop/Capstone/Python/Testing/Level_1_Beginner/Lesson_01_Variables_And_Data_Types.py):
+The following real-life program models a **Cloud Infrastructure Billing & Server Telemetry Monitor**, combining all the concepts taught in this lesson:
 
 ```python
-course_code = "CS-101"
-course_title = "Introduction to Computer Science"
-student_count = 128
-tuition_per_student = 1450.00
-is_active_term = True
+# =====================================================================
+# REAL-WORLD SYSTEM: Cloud Infrastructure Telemetry & Invoice Reporter
+# =====================================================================
 
-gross_tuition = student_count * tuition_per_student
+# 1. Variable Declarations & Primitive Data Types
+service_id = "AWS-EC2-CLUSTER-09"         # str
+allocated_cores = 64                      # int
+hourly_node_rate = 0.3875                 # float (precise computing cost)
+uptime_hours = 720.0                      # float (monthly continuous hours)
+is_high_availability = True               # bool (redundancy status)
 
-print(f"Course: {course_code} - {course_title}")
-print(f"Enrollment: {student_count} students | Active: {is_active_term}")
-print(f"Total Tuition Collected: ${gross_tuition:,.2f}")
+# 2. Inspecting Types with type()
+print("--- [System Type Introspection] ---")
+print("service_id type:      ", type(service_id), sep="\t")
+print("allocated_cores type: ", type(allocated_cores), sep="\t")
+print("hourly_node_rate type:", type(hourly_node_rate), sep="\t")
+print("is_ha status type:    ", type(is_high_availability), sep="\t")
+print()
+
+# 3. Arithmetic Computations
+base_compute_cost = allocated_cores * hourly_node_rate * uptime_hours
+redundancy_fee = 150.00 if is_high_availability else 0.00
+gross_invoice_amount = base_compute_cost + redundancy_fee
+
+# 4. Formatted Terminal Output with sep, end, and alignment f-strings
+print("Initializing Cluster Telemetry", end="...")
+print(" [SUCCESS]\n")
+
+print("=" * 60)
+print(f"{'CLOUD TELEMETRY & BILLING REPORT':^60}")
+print("=" * 60)
+print(f"{'Metric / Property':<35} | {'Value':>20}")
+print("-" * 60)
+print(f"{'Service Identifier':<35} | {service_id:>20}")
+print(f"{'Allocated CPU Cores':<35} | {allocated_cores:>20}")
+print(f"{'Hourly Core Cost Rate':<35} | {f'${hourly_node_rate:.4f}':>20}")
+print(f"{'Monthly Active Uptime (Hrs)':<35} | {f'{uptime_hours:.1f}':>20}")
+print(f"{'High Availability Enabled':<35} | {str(is_high_availability):>20}")
+print("-" * 60)
+print(f"{'Base Compute Subtotal':<35} | {f'${base_compute_cost:,.2f}':>20}")
+print(f"{'Redundancy Surcharge':<35} | {f'${redundancy_fee:,.2f}':>20}")
+print("=" * 60)
+print(f"{'TOTAL INVOICE AMOUNT':<35} | {f'${gross_invoice_amount:,.2f}':>20}")
+print("=" * 60)
 ```
+
+### 🔍 Code Explanation:
+- **Variables & Types**: Variables are initialized with descriptive `snake_case` names across all 4 primitive types (`str`, `int`, `float`, `bool`).
+- **`type()` & `sep`**: We display the type of each variable, utilizing `sep="\t"` to create clean tab stops.
+- **`end="..."`**: We print an initialization message without an immediate newline, completing it with `[SUCCESS]`.
+- **f-string Alignment**: We construct an aligned terminal table using `{text:<35}` (left-aligned 35 characters), `{text:^60}` (centered 60 characters), and `{value:>20}` (right-aligned 20 characters).
+- **Number Formatting**: Currency totals are formatted using `:,.2f` to guarantee two decimal places and commas for thousands.
 
 ---
 
@@ -217,7 +218,7 @@ You are developing the terminal checkout billing module for a modern retail elec
 2. Compute:
    - `subtotal`: `unit_price * quantity`
    - `final_total`: `subtotal - member_discount + shipping_fee`
-3. Using only **f-strings** and **`print()`**, output an itemized invoice formatted exactly as shown below, with all monetary values formatted to 2 decimal places (`:.2f`).
+3. Using only **f-strings** and **`print()`**, output an itemized invoice formatted exactly as shown in the expected output, with all monetary values formatted to 2 decimal places (`:.2f`).
 
 > [!IMPORTANT]
 > **Strict Constraint**: Use **only** concepts covered in Lesson 1 (variables, primitive types, basic math operators, f-strings, and `print()`). Do **not** use `input()`, `if` statements, functions, loops, or collections.
@@ -275,33 +276,9 @@ print("--------------------------------------------------")
 print(f"FINAL TOTAL:    ${final_total:.2f}")
 print("==================================================")
 ```
-</details>
 
----
-
-## 🧠 Self-Check Quiz
-
-1. **Which of the following is an illegal variable name in Python?**
-   - A) `user_total_2`
-   - B) `_system_cache`
-   - C) `2nd_user_id`
-   - D) `totalAccountBalance`
-
-2. **What is the resulting data type of `x = 100 / 4` in Python 3?**
-   - A) `int` (`25`)
-   - B) `float` (`25.0`)
-   - C) `str` (`"25"`)
-   - D) `bool` (`True`)
-
-3. **What is the output of `f"{1250000:,.2f}"`?**
-   - A) `"1250000.00"`
-   - B) `"1,250,000.0"`
-   - C) `"1,250,000.00"`
-   - D) `SyntaxError`
-
-<details>
-<summary><b>View Answers</b></summary>
-1: C (Variables cannot start with numeric digits)<br>
-2: B (The single '/' true division operator always returns a float in Python)<br>
-3: C (The ',.2f' format specifier adds thousands comma separators and rounds to 2 decimal places)
+**Explanation of the Solution:**
+- We store all transaction facts in typed variables conforming to PEP 8 snake_case.
+- We multiply `unit_price` by `quantity` to get `subtotal`, and adjust for discounts and shipping to compute `final_total`.
+- We use f-strings with `:.2f` float precision format specifiers to display values to standard financial precision.
 </details>

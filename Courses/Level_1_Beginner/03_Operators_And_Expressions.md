@@ -1,221 +1,266 @@
-# Lesson 3: Operators & Arithmetic Expressions
+# Lesson 3: Operators, Boolean Logic & Expressions
 
-Operators are special symbols and keywords in Python that carry out mathematical computations, logical evaluations, and value assignments. In this lesson, you will master arithmetic operators, augmented assignments, comparison checks, and boolean logic.
+Computers fundamentally operate by evaluating expressions—combining values, variables, and operators to yield new data and make decisions. In this lesson, you will master all families of Python operators, logical evaluation strategies, and operator precedence.
 
 ---
 
 ## 🎯 Learning Objectives
 By the end of this lesson, you will:
-1. Master all 7 arithmetic operators (`+`, `-`, `*`, `/`, `//`, `%`, `**`) and their behavioral nuances.
-2. Apply floor division (`//`) and modulus (`%`) to solve real-world partitioning and time decomposition problems.
-3. Understand Operator Precedence (PEMDAS/BODMAS) and express complex mathematical equations cleanly.
-4. Use shorthand augmented assignment operators (`+=`, `-=`, `*=`, etc.) for in-place updates.
-5. Formulate comparison expressions (`==`, `!=`, `<`, `>`, `<=`, `>=`).
-6. Construct compound boolean logic using `and`, `or`, and `not`, including **Short-Circuit Evaluation**.
+1. Master all 7 Arithmetic Operators, distinguishing True Division (`/`) from Floor Division (`//`) and Modulo (`%`).
+2. Utilize Augmented Assignment Operators (`+=`, `-=`, `*=`, etc.) for clean state updates.
+3. Compare values using the 6 Relational/Comparison Operators (`==`, `!=`, `<`, `>`, `<=`, `>=`).
+4. Construct compound boolean decisions using Logical Operators (`and`, `or`, `not`).
+5. Understand **Short-Circuit Evaluation** and its practical performance/safety implications.
+6. Evaluate expressions reliably following Python's **Operator Precedence (PEMDAS)**.
 
 ---
 
-## 1. The 7 Arithmetic Operators
+## 1. Arithmetic Operators
 
-| Operator | Operation | Syntax | Example | Result | Type Returned |
-| :---: | :--- | :--- | :--- | :--- | :--- |
-| `+` | Addition | `a + b` | `15 + 4` | `19` | `int` or `float` |
-| `-` | Subtraction | `a - b` | `15 - 4` | `11` | `int` or `float` |
-| `*` | Multiplication | `a * b` | `15 * 4` | `60` | `int` or `float` |
-| `/` | **True Division** | `a / b` | `15 / 4` | `3.75` | **Always `float`** |
-| `//` | **Floor Division** | `a // b` | `15 // 4` | `3` | `int` (rounds down) |
-| `%` | **Modulus (Remainder)** | `a % b` | `15 % 4` | `3` | `int` or `float` |
-| `**` | **Exponentiation (Power)**| `a ** b` | `2 ** 4` | `16` ($2^4$) | `int` or `float` |
+Python supports 7 core arithmetic operators:
 
-### 💡 Why `//` and `%` are Fundamental in Computer Science
-Floor division (`//`) discards the fractional part and rounds down to the nearest integer. Modulus (`%`) returns the remainder left over after integer division.
-
-#### 1. Time Unit Decomposition:
 ```python
-total_seconds = 3725  # 1 hour, 2 minutes, 5 seconds
+a = 17
+b = 5
 
-hours = total_seconds // 3600         # 1 hr
-remaining_seconds = total_seconds % 3600  # 125 sec
+# 1. Addition (+) & Subtraction (-)
+print(a + b)   # 22
+print(a - b)   # 12
 
-minutes = remaining_seconds // 60     # 2 min
-seconds = remaining_seconds % 60      # 5 sec
+# 2. Multiplication (*) & Exponentiation (**)
+print(a * b)   # 85
+print(b ** 3)  # 5 * 5 * 5 = 125 (5 cubed)
 
-print(f"{hours}h {minutes}m {seconds}s")  # Output: 1h 2m 5s
+# 3. True Division (/) -> ALWAYS returns a float
+print(a / b)   # 3.4
+
+# 4. Floor / Integer Division (//) -> Discards decimal remainder
+print(a // b)  # 3
+
+# 5. Modulo (%) -> Returns the remainder after integer division
+print(a % b)   # 2 (since 17 = 5 * 3 + 2)
 ```
 
-#### 2. Even vs. Odd Testing:
-```python
-number = 48
-is_even = (number % 2 == 0)  # True
-is_odd = (number % 2 != 0)   # False
-```
-
-#### 3. Circular Cycling / Wrapping (Round-Robin):
-```python
-# If you have 4 worker servers (IDs 0, 1, 2, 3):
-request_number = 14
-assigned_worker = request_number % 4  # 2 (Wraps around cleanly)
-```
+### Essential Practical Uses of Modulo (`%`) and Floor Division (`//`):
+1. **Even vs. Odd Check**: Any number `n % 2 == 0` is even; `n % 2 != 0` is odd.
+2. **Unit Conversions (Hours/Minutes/Seconds or Change Breakdown)**:
+   ```python
+   total_seconds = 3725
+   hours = total_seconds // 3600    # 1 hour
+   rem_seconds = total_seconds % 3600
+   minutes = rem_seconds // 60      # 2 minutes
+   seconds = rem_seconds % 60       # 5 seconds
+   print(f"{hours}h {minutes}m {seconds}s") # 1h 2m 5s
+   ```
 
 ---
 
-## 2. Operator Precedence (PEMDAS / BODMAS)
+## 2. Augmented Assignment Operators
 
-When multiple operators appear in a single expression, Python evaluates them in order of priority:
-
-1. **Parentheses** `()`: Highest precedence (overrides everything).
-2. **Exponentiation** `**`: Evaluated right-to-left.
-3. **Multiplication, Division, Floor Div, Modulus** `*`, `/`, `//`, `%`: Evaluated left-to-right.
-4. **Addition and Subtraction** `+`, `-`: Evaluated left-to-right.
+Instead of writing `balance = balance + deposit`, Python provides compact augmented assignment operators:
 
 ```python
-# Without parentheses:
-result1 = 5 + 3 * 2 ** 3   # 2**3=8 -> 3*8=24 -> 5+24 = 29
-
-# With parentheses:
-result2 = (5 + 3) * (2 ** 3)  # 8 * 8 = 64
-```
-
-> [!TIP]
-> Always use parentheses when writing compound formulas. It eliminates ambiguity and makes your code self-documenting for team members.
-
----
-
-## 3. Augmented Assignment Operators
-
-Instead of retyping a variable name to update its value (`counter = counter + 1`), Python provides augmented assignment operators:
-
-```python
-balance = 1000.00
-balance += 250.00   # balance = balance + 250.00 (now 1250.00)
-balance -= 50.00    # balance = balance - 50.00  (now 1200.00)
-balance *= 1.05     # balance = balance * 1.05   (now 1260.00, 5% interest)
-balance /= 2        # balance = balance / 2      (now 630.00)
-balance //= 10      # balance = balance // 10    (now 63.0)
-balance %= 20       # balance = balance % 20     (now 3.0)
+inventory = 100
+inventory += 25   # inventory = inventory + 25 (125)
+inventory -= 10   # inventory = inventory - 10 (115)
+inventory *= 2    # inventory = inventory * 2  (230)
+inventory //= 4   # inventory = inventory // 4 (57)
+inventory %= 10   # inventory = inventory % 10 (7)
+inventory **= 2   # inventory = inventory ** 2 (49)
 ```
 
 ---
 
-## 4. Comparison Operators
+## 3. Comparison (Relational) Operators
 
-Comparison operators evaluate relationships between values and return a `bool` (`True` or `False`):
+Comparison operators evaluate expressions and unconditionally return a boolean (`True` or `False`):
 
-| Operator | Description | Example | Result |
+| Operator | Meaning | Example | Result |
 | :---: | :--- | :--- | :---: |
-| `==` | Equal to | `10 == 10.0` | `True` |
+| `==` | Equal to | `10 == 10` | `True` |
 | `!=` | Not equal to | `10 != 5` | `True` |
-| `>` | Greater than | `25 > 30` | `False` |
-| `<` | Less than | `15 < 20` | `True` |
-| `>=` | Greater than or equal to | `50 >= 50` | `True` |
-| `<=` | Less than or equal to | `40 <= 39` | `False` |
-
-> [!CAUTION]
-> **Single `=` vs Double `==`**:
-> - `=` is an **assignment** statement (`x = 10` puts `10` into `x`).
-> - `==` is an **equality check** (`x == 10` returns `True` if `x` equals `10`).
+| `>` | Strictly greater than | `15 > 20` | `False` |
+| `<` | Strictly less than | `8 < 12` | `True` |
+| `>=` | Greater than or equal to | `10 >= 10` | `True` |
+| `<=` | Less than or equal to | `7 <= 5` | `False` |
 
 ---
 
-## 5. Logical Operators & Short-Circuit Evaluation
+## 4. Logical Operators & Short-Circuit Evaluation
 
 Logical operators combine multiple boolean expressions:
 
-- **`and`**: Returns `True` only if **both** operands are `True`.
-- **`or`**: Returns `True` if **at least one** operand is `True`.
-- **`not`**: Inverts the boolean truth value.
+| Operator | Description | Truth Condition |
+| :---: | :--- | :--- |
+| `and` | Logical AND | Returns `True` **only if both** operands are `True` |
+| `or` | Logical OR | Returns `True` **if at least one** operand is `True` |
+| `not` | Logical NOT | Inverts truth value (`not True` $\rightarrow$ `False`) |
 
 ```python
-credit_score = 720
-annual_income = 65000.00
-has_bankruptcies = False
+user_age = 22
+has_license = True
+has_dui_record = False
 
-# Both conditions must be met:
-is_eligible = (credit_score >= 700) and (annual_income >= 50000.00)  # True
-
-# Clean inversion:
-is_creditworthy = is_eligible and (not has_bankruptcies)             # True
+# Eligible to rent vehicle?
+is_eligible = (user_age >= 21) and has_license and (not has_dui_record)
+print(f"Rental Approved: {is_eligible}") # True
 ```
 
 ### ⚡ Short-Circuit Evaluation
-Python evaluates logical expressions from left to right and stops as soon as the outcome is guaranteed:
-- In `A and B`: If `A` is `False`, Python immediately returns `False` without checking `B`.
-- In `A or B`: If `A` is `True`, Python immediately returns `True` without checking `B`.
+Python stops evaluating a compound expression as soon as the outcome is guaranteed:
+- In `A and B`: If `A` is `False`, Python immediately returns `False` without evaluating `B`.
+- In `A or B`: If `A` is `True`, Python immediately returns `True` without evaluating `B`.
+
+This prevents errors, such as avoiding division by zero:
+```python
+total_count = 0
+total_sum = 100
+# Safe because total_count != 0 short-circuits before the division executes:
+if total_count != 0 and (total_sum / total_count > 50):
+    print("Above threshold")
+```
+
+---
+
+## 5. Operator Precedence (Order of Operations)
+
+When multiple operators appear in a single expression, Python evaluates them in strict precedence:
+
+1. **Parentheses**: `( )`
+2. **Exponentiation**: `**`
+3. **Unary Signs**: `+x`, `-x`
+4. **Multiplication, Division, Floor Div, Modulo**: `*`, `/`, `//`, `%`
+5. **Addition, Subtraction**: `+`, `-`
+6. **Comparisons**: `==`, `!=`, `<`, `>`, `<=`, `>=`
+7. **Logical NOT**: `not`
+8. **Logical AND**: `and`
+9. **Logical OR**: `or`
 
 ---
 
 ## 💻 Code Example & Reference
 
-See the full working code for this lesson in [Lesson_03_Operators_And_Expressions.py](file:///C:/Users/asiro/Desktop/Capstone/Python/Testing/Level_1_Beginner/Lesson_03_Operators_And_Expressions.py):
+The following real-life program models an **Automated Warehouse Palletizing & Shipping Tier Engine**, utilizing all operators and evaluation concepts taught in this lesson:
 
 ```python
-# Cash Register Coin Breakdown
-total_cents = int(input("Enter total change in cents (e.g. 287): "))
+# =====================================================================
+# REAL-WORLD SYSTEM: Automated Warehouse Pallet & Freight Tier Engine
+# =====================================================================
 
-quarters = total_cents // 25
-rem_after_quarters = total_cents % 25
+print("=" * 65)
+print(f"{'📦 LOGISTICS PALLETIZING & FREIGHT VALIDATION ENGINE':^65}")
+print("=" * 65)
 
-dimes = rem_after_quarters // 10
-rem_after_dimes = rem_after_quarters % 10
+# 1. Capture and cast order specifications (Lessons 1 & 2)
+sku_code = input("Enter Product SKU: ").strip().upper()
+unit_weight_kg = float(input("Enter unit item weight (kg): "))
+total_ordered_units = int(input("Enter total units ordered: "))
+is_fragile_str = input("Is the shipment marked fragile? (yes/no): ").strip().lower()
+is_fragile = is_fragile_str in ("yes", "y", "true")
 
-nickels = rem_after_dimes // 5
-pennies = rem_after_dimes % 5
+# 2. Arithmetic & Division Mechanics (Lesson 3)
+UNITS_PER_PALLET = 48
+full_pallets = total_ordered_units // UNITS_PER_PALLET
+loose_boxes = total_ordered_units % UNITS_PER_PALLET
+has_loose_boxes = loose_boxes != 0
 
-print(f"Optimal coin change for {total_cents}¢:")
-print(f"Quarters (25¢): {quarters} | Dimes (10¢): {dimes} | Nickels (5¢): {nickels} | Pennies (1¢): {pennies}")
+total_gross_weight_kg = total_ordered_units * unit_weight_kg
+pallet_tare_weight_kg = (full_pallets + (1 if has_loose_boxes else 0)) * 22.5
+total_shipment_weight = total_gross_weight_kg + pallet_tare_weight_kg
+
+# 3. Augmented State Tracking (Lesson 3)
+estimated_handling_cost = 50.00
+estimated_handling_cost += full_pallets * 15.00
+if has_loose_boxes:
+    estimated_handling_cost += loose_boxes * 1.50
+if is_fragile:
+    estimated_handling_cost *= 1.20 # 20% delicate handling fee
+
+# 4. Complex Logical Expressions with Short-Circuiting (Lesson 3)
+MAX_STANDARD_WEIGHT_KG = 2500.0
+is_heavy_freight = total_shipment_weight > 1000.0
+requires_special_carrier = (total_shipment_weight >= MAX_STANDARD_WEIGHT_KG) or (is_fragile and is_heavy_freight)
+qualifies_for_direct_dispatch = (full_pallets >= 2) and (not requires_special_carrier) and (total_ordered_units % 2 == 0)
+
+# 5. Formatted Operational Summary (Lessons 1 & 2)
+print("\n" + "=" * 65)
+print(f"{'WAREHOUSE DISPATCH MANIFEST':^65}")
+print("=" * 65)
+print(f"{'Product SKU:':<32} {sku_code}")
+print(f"{'Total Ordered Units:':<32} {total_ordered_units:,} units")
+print(f"{'Full Pallet Stacks (48/plt):':<32} {full_pallets} full pallets")
+print(f"{'Loose Package Count:':<32} {loose_boxes} loose boxes")
+print(f"{'Total Cargo Weight:':<32} {total_shipment_weight:,.2f} kg")
+print("-" * 65)
+print(f"{'Special Carrier Required:':<32} {str(requires_special_carrier)}")
+print(f"{'Direct Dispatch Clearance:':<32} {str(qualifies_for_direct_dispatch)}")
+print("-" * 65)
+print(f"{'TOTAL HANDLING & FREIGHT FEE:':<32} ${estimated_handling_cost:,.2f}")
+print("=" * 65)
 ```
+
+### 🔍 Code Explanation:
+- **Floor Division & Modulo**: `total_ordered_units // 48` calculates complete pallets; `total_ordered_units % 48` calculates remaining unstacked boxes.
+- **Augmented Assignments**: `+=` and `*=` update the handling charge progressively based on pallet counts and fragility status.
+- **Relational & Boolean Logic**: Relational comparisons (`>=`, `!=`, `>`) combined with logical operators (`and`, `or`, `not`) determine dispatch routing rules.
+- **Short-Circuit Safety**: Boolean checks verify freight limits and conditions without unnecessary sub-evaluations.
 
 ---
 
-## 📝 Quick Exercise: Server Cluster Telemetry & Task Distribution
+## 📝 Quick Exercise: Point of Sale Coin Change Breakdown & Discount Matrix
 
 ### 🏢 Real-Life Scenario
-You are building an automated telemetry diagnostic script for a cloud operations center. The tool reads the total accumulated uptime in seconds for a database server, converts it into standard human units (Days, Hours, Minutes, Seconds), and computes the workload distribution of batch tasks across a worker node cluster.
+You are developing the cashier change calculator and cash drawer dispenser for a physical retail store. When a customer pays cash for an invoice, the system computes the exact change due and breaks down the change into the minimum number of physical currency denominations (Dollars, Quarters, Dimes, Nickels, Pennies) using floor division and modulo arithmetic.
 
 ### 📋 Requirements
-1. Prompt and capture inputs:
-   - `total_uptime_seconds`: Prompt with `"Enter server uptime in seconds: "` (`int`, e.g. `372845`).
-   - `total_jobs`: Prompt with `"Enter total pending batch jobs: "` (`int`, e.g. `1025`).
-   - `worker_nodes`: Prompt with `"Enter active worker server count: "` (`int`, e.g. `8`).
-2. Decompose uptime using integer floor division `//` and modulus `%`:
-   - 1 Day = `86400` seconds $\rightarrow$ `days = total_uptime_seconds // 86400`, `rem_days = total_uptime_seconds % 86400`
-   - 1 Hour = `3600` seconds $\rightarrow$ `hours = rem_days // 3600`, `rem_hours = rem_days % 3600`
-   - 1 Minute = `60` seconds $\rightarrow$ `minutes = rem_hours // 60`, `seconds = rem_hours % 60`
-3. Compute cluster task distribution:
-   - `jobs_per_worker = total_jobs // worker_nodes`
-   - `unassigned_overflow = total_jobs % worker_nodes`
-4. Formulate boolean health checks using comparison and logical operators:
-   - `meets_sla`: Uptime is greater than or equal to 1 day (`days >= 1`).
-   - `is_perfectly_balanced`: Unassigned overflow equals zero (`unassigned_overflow == 0`).
-   - `is_overloaded`: `jobs_per_worker > 100` or `unassigned_overflow >= 5`.
-   - `is_cluster_healthy`: Meets SLA and is not overloaded (`meets_sla and (not is_overloaded)`).
-5. Output the structured telemetry report.
+1. Capture and sanitize inputs:
+   - `cashier_name`: Sanitized with `.strip().title()`
+   - `total_due`: Total amount owed in dollars (e.g. `17.38`), cast to `float`
+   - `cash_paid`: Cash handed by customer (e.g. `20.00`), cast to `float`
+2. Perform arithmetic and denomination breakdown:
+   - Calculate `change_due_dollars = cash_paid - total_due`.
+   - Convert `change_due_cents = round(change_due_dollars * 100)` to work cleanly in integers without float rounding errors.
+   - Compute exact counts:
+     - `dollars = change_due_cents // 100`
+     - `rem_cents_1 = change_due_cents % 100`
+     - `quarters = rem_cents_1 // 25`
+     - `rem_cents_2 = rem_cents_1 % 25`
+     - `dimes = rem_cents_2 // 10`
+     - `rem_cents_3 = rem_cents_2 % 10`
+     - `nickels = rem_cents_3 // 5`
+     - `pennies = rem_cents_3 % 5`
+3. Boolean Logic:
+   - Check if exact payment was made (`change_due_cents == 0`).
+   - Check if coin change is required (`change_due_cents % 100 != 0`).
+4. Output the receipt using formatted f-strings.
 
 > [!IMPORTANT]
-> **Strict Constraint**: Use **only** concepts covered in Lessons 1, 2, and 3 (variables, primitives, `input()`, `int()`, `float()`, arithmetic operators, comparison operators, logical operators, f-strings, and `print()`). Do **not** use `if` statements, loops, or functions.
+> **Cumulative Constraint**: Combine concepts from **Lessons 1, 2, and 3** (primitives, casting, string sanitization, arithmetic operators `//`, `%`, comparison `==`, `!=`, and f-strings).
 
-### 🎯 Sample Interactive Run
+### 🎯 Expected Output
+*(Assuming the user inputs: Cashier: `  marcus vance  `, Total Due: `17.37`, Cash Paid: `20.00`)*
+
 ```text
-Enter server uptime in seconds: 372845
-Enter total pending batch jobs: 1025
-Enter active worker server count: 8
+Enter Cashier Name:   marcus vance  
+Enter Total Due ($): 17.37
+Enter Cash Handed ($): 20.00
 
 ==================================================
-        CLOUD CLUSTER TELEMETRY REPORT            
+              CASH DRAWER DISPENSER               
 ==================================================
-Uptime Breakdown: 4d 7h 34m 5s (Total: 372845s)
+Cashier:          Marcus Vance
+Total Amount Due: $17.37
+Cash Received:    $20.00
 --------------------------------------------------
-WORKLOAD DISTRIBUTION:
-Total Batch Jobs:    1025
-Active Worker Nodes: 8
-Jobs Per Node:       128
-Unassigned Backlog:  1
---------------------------------------------------
-DIAGNOSTIC HEALTH CHECKS:
-Meets 24h SLA:       True
-Perfect Load Split:  False
-Cluster Overloaded:  True
-Cluster Healthy:     False
+TOTAL CHANGE DUE: $2.63 (263 cents)
+Coin Change Needed: True
+==================================================
+OPTIMAL CHANGE DENOMINATIONS:
+  $1.00 Dollar Bills: 2
+  $0.25 Quarters:     2
+  $0.10 Dimes:        1
+  $0.05 Nickels:      0
+  $0.01 Pennies:      3
 ==================================================
 ```
 
@@ -223,77 +268,52 @@ Cluster Healthy:     False
 <summary><b>🔍 View Exercise Solution</b></summary>
 
 ```python
-# 1. Capture inputs
-total_uptime_seconds = int(input("Enter server uptime in seconds: "))
-total_jobs = int(input("Enter total pending batch jobs: "))
-worker_nodes = int(input("Enter active worker server count: "))
+# 1. Inputs and Sanitization (Lessons 1 & 2)
+cashier_name = input("Enter Cashier Name: ").strip().title()
+total_due = float(input("Enter Total Due ($): "))
+cash_paid = float(input("Enter Cash Handed ($): "))
 
-# 2. Decompose uptime
-days = total_uptime_seconds // 86400
-rem_days = total_uptime_seconds % 86400
+# 2. Financial Arithmetic & Floor Division / Modulo (Lesson 3)
+change_due_dollars = cash_paid - total_due
+change_due_cents = int(round(change_due_dollars * 100))
 
-hours = rem_days // 3600
-rem_hours = rem_days % 3600
+# Denomination breakdown
+dollars = change_due_cents // 100
+rem_cents_1 = change_due_cents % 100
 
-minutes = rem_hours // 60
-seconds = rem_hours % 60
+quarters = rem_cents_1 // 25
+rem_cents_2 = rem_cents_1 % 25
 
-# 3. Workload distribution
-jobs_per_worker = total_jobs // worker_nodes
-unassigned_overflow = total_jobs % worker_nodes
+dimes = rem_cents_2 // 10
+rem_cents_3 = rem_cents_2 % 10
 
-# 4. Diagnostic boolean evaluations
-meets_sla = days >= 1
-is_perfectly_balanced = unassigned_overflow == 0
-is_overloaded = (jobs_per_worker > 100) or (unassigned_overflow >= 5)
-is_cluster_healthy = meets_sla and (not is_overloaded)
+nickels = rem_cents_3 // 5
+pennies = rem_cents_3 % 5
 
-# 5. Formatted telemetry output
+# 3. Boolean Conditions (Lesson 3)
+needs_coin_change = (change_due_cents % 100) != 0
+
+# 4. Formatted Terminal Output (Lesson 1 f-strings)
 print("\n==================================================")
-print("        CLOUD CLUSTER TELEMETRY REPORT            ")
+print("              CASH DRAWER DISPENSER               ")
 print("==================================================")
-print(f"Uptime Breakdown: {days}d {hours}h {minutes}m {seconds}s (Total: {total_uptime_seconds}s)")
+print(f"Cashier:          {cashier_name}")
+print(f"Total Amount Due: ${total_due:.2f}")
+print(f"Cash Received:    ${cash_paid:.2f}")
 print("--------------------------------------------------")
-print("WORKLOAD DISTRIBUTION:")
-print(f"Total Batch Jobs:    {total_jobs}")
-print(f"Active Worker Nodes: {worker_nodes}")
-print(f"Jobs Per Node:       {jobs_per_worker}")
-print(f"Unassigned Backlog:  {unassigned_overflow}")
-print("--------------------------------------------------")
-print("DIAGNOSTIC HEALTH CHECKS:")
-print(f"Meets 24h SLA:       {meets_sla}")
-print(f"Perfect Load Split:  {is_perfectly_balanced}")
-print(f"Cluster Overloaded:  {is_overloaded}")
-print(f"Cluster Healthy:     {is_cluster_healthy}")
+print(f"TOTAL CHANGE DUE: ${change_due_dollars:.2f} ({change_due_cents} cents)")
+print(f"Coin Change Needed: {needs_coin_change}")
+print("==================================================")
+print("OPTIMAL CHANGE DENOMINATIONS:")
+print(f"  $1.00 Dollar Bills: {dollars}")
+print(f"  $0.25 Quarters:     {quarters}")
+print(f"  $0.10 Dimes:        {dimes}")
+print(f"  $0.05 Nickels:      {nickels}")
+print(f"  $0.01 Pennies:      {pennies}")
 print("==================================================")
 ```
-</details>
 
----
-
-## 🧠 Self-Check Quiz
-
-1. **What is the result of `19 // 4` and `19 % 4`?**
-   - A) `4.75` and `3`
-   - B) `4` and `3`
-   - C) `5` and `-1`
-   - D) `4` and `0.75`
-
-2. **What does `False or not False and True` evaluate to?**
-   - A) `False`
-   - B) `True`
-   - C) `None`
-   - D) `SyntaxError`
-
-3. **In the expression `score > 90 and verify_user()`, if `score` is 75, does Python execute `verify_user()`?**
-   - A) Yes, Python always evaluates both sides.
-   - B) No, because of short-circuit evaluation on `and` when the left operand is `False`.
-   - C) It raises a `RuntimeError`.
-   - D) It depends on whether `verify_user` is imported.
-
-<details>
-<summary><b>View Answers</b></summary>
-1: B (19 // 4 is 4, 19 % 4 leaves remainder 3)<br>
-2: B ('not False' is True -> 'True and True' is True -> 'False or True' is True)<br>
-3: B (Short-circuiting terminates the evaluation immediately when the first condition in an 'and' check is False)
+**Explanation of the Solution:**
+- Multiplying the dollar amount by 100 converts floating-point currency into an exact integer of cents, avoiding binary float rounding discrepancies.
+- Repeated floor division (`//`) extracts each denomination count, while modulo (`%`) retains the remainder for subsequent smaller coin calculations.
 </details>
