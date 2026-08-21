@@ -101,29 +101,74 @@ print(f"Function name preserved: {compute_heavy_hash.__name__}") # 'compute_heav
 
 ---
 
-## 4. Parameterized Decorators (Decorators with Arguments)
+---
 
-To pass parameters into a decorator (e.g. `@retry(max_attempts=3)`), construct a 3-level function hierarchy:
+## 5. Under the Hood: Closures & `__closure__` Cells
+
+When an inner function captures a variable from an outer scope, CPython creates a **`cell` object** on the heap to store the reference:
 
 ```python
-import functools
+def make_multiplier(factor: int):
+    def multiply(x: int) -> int:
+        return x * factor
+    return multiply
 
-def retry(max_attempts: int = 3, fallback_value = None):
-    """Decorator factory accepting configuration parameters."""
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            for attempt in range(1, max_attempts + 1):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as err:
-                    print(f"⚠️ [{func.__name__}] Attempt {attempt}/{max_attempts} failed: {err}")
-                    if attempt == max_attempts:
-                        print(f"❌ [{func.__name__}] All {max_attempts} retries exhausted. Returning fallback.")
-                        return fallback_value
-        return wrapper
-    return decorator
+double = make_multiplier(2)
+# Inspecting the closure cell:
+print(double.__closure__) # (<cell at 0x7f...: int object at 0x...>,)
+print(double.__closure__[0].cell_contents) # 2
 ```
+
+---
+
+## 6. Class Decorators & Callable Class Decorators
+
+### 1. Decorating Classes
+You can apply decorators directly to class definitions to automatically inject attributes or register classes in a plugin registry:
+
+```python
+def add_audit_timestamp(cls):
+    """Class decorator injecting a creation timestamp."""
+    orig_init = cls.__init__
+    def new_init(self, *args, **kwargs):
+        self.created_at = time.time()
+        orig_init(self, *args, **kwargs)
+    cls.__init__ = new_init
+    return cls
+
+@add_audit_timestamp
+class UserAccount:
+    def __init__(self, username: str):
+        self.username = username
+```
+
+### 2. Decorators Implemented as Classes (`__call__`)
+```python
+class CallCounter:
+    """Decorator maintaining persistent invocation count."""
+    def __init__(self, func):
+        self.func = func
+        self.count = 0
+        functools.update_wrapper(self, func)
+
+    def __call__(self, *args, **kwargs):
+        self.count += 1
+        print(f"[{self.func.__name__}] Invocation #{self.count}")
+        return self.func(*args, **kwargs)
+```
+
+---
+
+## 7. Decorator Stacking Execution Order
+
+When multiple decorators are stacked:
+```python
+@decorator_A
+@decorator_B
+def target(): pass
+```
+- **Definition Time (Wrapping)**: Evaluates from **Bottom to Top**: `target = decorator_A(decorator_B(target))`
+- **Execution Time (Call)**: Evaluates from **Top to Bottom (Outside-In)**: `decorator_A` runs first $\rightarrow$ calls `decorator_B` $\rightarrow$ calls `target`.
 
 ---
 
@@ -229,6 +274,58 @@ print("=" * 70)
 
 ---
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master higher-order functions, closures, `functools.wraps`, parameterized decorators, class decorators, and memoization:
+
+---
+
+### 🟢 Tier 1: Closures & Basic Function Decorators (Exercises 1–3)
+
+#### 🔹 Exercise 1: Multiplier Factory Closure
+* **Goal**: Write `make_multiplier(n: int)` returning a closure that multiplies any input by `n`.
+
+#### 🔹 Exercise 2: Function Call Logger Decorator
+* **Goal**: Write `@log_call` printing function name, passed `*args`, and returned result using `@functools.wraps`.
+
+#### 🔹 Exercise 3: Uppercase String Return Decorator
+* **Goal**: Write `@uppercase_output` decorator that automatically converts string return values to uppercase.
+
+---
+
+### 🟡 Tier 2: Stateful Closures & Performance Decorators (Exercises 4–6)
+
+#### 🔹 Exercise 4: Stateful Running Average Closure
+* **Goal**: Write `create_averager()` maintaining cumulative sum and count using `nonlocal`.
+
+#### 🔹 Exercise 5: Wall-Clock Benchmark Timer
+* **Goal**: Write `@benchmark` decorator measuring and printing execution duration with `time.perf_counter()`.
+
+#### 🔹 Exercise 6: In-Memory Memoization / Cache Decorator
+* **Goal**: Write `@memoize` caching results in a closure dictionary `cache[(args, tuple(kwargs.items()))]`. Test on recursive Fibonacci.
+
+---
+
+### 🟠 Tier 3: Parameterized & Class Decorators (Exercises 7–9)
+
+#### 🔹 Exercise 7: Parameterized Rate Limiter Decorator
+* **Goal**: Write `@rate_limit(max_per_minute: int)` decorator enforcing a maximum call frequency.
+
+#### 🔹 Exercise 8: Parameterized Retry Decorator
+* **Goal**: Write `@retry(retries=3, delay_sec=0.1)` retrying transient network errors before raising.
+
+#### 🔹 Exercise 9: Class-Based Decorator (`__call__`)
+* **Goal**: Implement `class ExecutionCounter` tracking invocation count as a class instance and decorating functions.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Database Query Retry & Performance Profiler Suite
+* **Goal**: Combine `@audit_profile` (execution duration instrumentation) and `@retry_query(max_retries=3)` (error catch and retry) over a flaky SQL query simulation.
+
+---
+
 ## 📝 Quick Exercise: Database Query Retry & Performance Profiler Decorator Framework
 
 ### 🏢 Real-Life Scenario
@@ -265,13 +362,15 @@ You are developing the database driver resiliency middleware for a high-traffic 
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Decorator Suite & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Database Resilience Decorator Suite
+# =====================================================================
 import functools
 import time
 
-# 1. Performance Profiler Decorator (Level 2)
 def audit_profile(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -283,7 +382,6 @@ def audit_profile(func):
     return wrapper
 
 
-# 2. Parameterized Retry Decorator (Level 2)
 def retry_query(max_retries: int = 3):
     def decorator(func):
         @functools.wraps(func)
@@ -295,14 +393,11 @@ def retry_query(max_retries: int = 3):
                 except Exception as err:
                     last_exception = err
                     print(f"⚠️ Attempt {attempt}/{max_retries} failed: {err}. Retrying...")
-            
-            # If all retries exhausted, raise last error
             raise last_exception
         return wrapper
     return decorator
 
 
-# 3. Flaky Database Query Simulation
 call_counter = 0
 
 @audit_profile
@@ -315,7 +410,6 @@ def execute_db_query(query_sql: str, failures_to_simulate: int = 2) -> dict:
     return {"status": "SUCCESS", "rows": 14, "query": query_sql}
 
 
-# 4. Execution Run
 print("==================================================")
 print("        DATABASE RESILIENCE DECORATOR SUITE       ")
 print("==================================================")
@@ -328,9 +422,83 @@ except Exception as fatal_err:
     print(f"❌ Fatal Failure: {fatal_err}")
 
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `@retry_query(max_retries=3)` catches `ConnectionResetError` and transparently re-runs the target function up to 3 times.
-- `@audit_profile` wraps the successful execution to capture and report execution duration in milliseconds.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+def make_multiplier(n: int):
+    return lambda x: x * n
+
+# Ex 2:
+def log_call(fn):
+    @functools.wraps(fn)
+    def w(*args, **kw):
+        res = fn(*args, **kw)
+        print(f"[{fn.__name__}] args={args} -> res={res}")
+        return res
+    return w
+
+# Ex 3:
+def uppercase_output(fn):
+    @functools.wraps(fn)
+    def w(*args, **kw):
+        return str(fn(*args, **kw)).upper()
+    return w
+
+# Ex 4:
+def create_averager():
+    tot, cnt = 0.0, 0
+    def averager(val: float) -> float:
+        nonlocal tot, cnt
+        tot += val
+        cnt += 1
+        return tot / cnt
+    return averager
+
+# Ex 5:
+def benchmark(fn):
+    @functools.wraps(fn)
+    def w(*args, **kw):
+        t0 = time.perf_counter()
+        r = fn(*args, **kw)
+        print(f"{fn.__name__} took {(time.perf_counter()-t0)*1000:.2f}ms")
+        return r
+    return w
+
+# Ex 6:
+def memoize(fn):
+    cache = {}
+    @functools.wraps(fn)
+    def w(*args):
+        if args not in cache: cache[args] = fn(*args)
+        return cache[args]
+    return w
+
+# Ex 7:
+def rate_limit(max_calls: int):
+    def dec(fn):
+        cnt = 0
+        @functools.wraps(fn)
+        def w(*a, **kw):
+            nonlocal cnt
+            cnt += 1
+            if cnt > max_calls: raise RuntimeError("Rate exceeded")
+            return fn(*a, **kw)
+        return w
+    return dec
+
+# Ex 8:
+# Parameterized retry decorator demonstrated in main Exercise 10 above.
+
+# Ex 9:
+class ExecutionCounter:
+    def __init__(self, fn):
+        self.fn, self.calls = fn, 0
+        functools.update_wrapper(self, fn)
+    def __call__(self, *a, **kw):
+        self.calls += 1
+        return self.fn(*a, **kw)
+```
 </details>
+

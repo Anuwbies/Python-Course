@@ -88,19 +88,70 @@ def test_calculate_vat_matrix(price, rate, expected):
 
 ---
 
-## 3. Managing Fixtures with `@pytest.fixture`
+---
 
-Fixtures provide isolated, repeatable setup and teardown contexts for unit tests:
+## 4. Advanced Typing: `TypedDict`, `TypeVar`, and Covariance
+
+### 1. `TypedDict`: Dictionary Schema Typing
+Standard `dict` types only indicate general key/value types (e.g. `dict[str, Any]`). `TypedDict` provides precise key-by-key static typing:
 
 ```python
-@pytest.fixture
-def mock_customer_account():
-    """Provides a fresh, pre-configured account dictionary for each test."""
-    return {"account_id": "ACC-01", "balance": 1000.00, "status": "ACTIVE"}
+from typing import TypedDict, NotRequired
 
-def test_deposit_adds_to_balance(mock_customer_account):
-    mock_customer_account["balance"] += 250.00
-    assert mock_customer_account["balance"] == 1250.00
+class DatabaseConfig(TypedDict):
+    host: str
+    port: int
+    ssl_enabled: bool
+    password: NotRequired[str] # Optional field
+
+# Static checkers verify that all required keys are provided with correct types:
+cfg: DatabaseConfig = {"host": "localhost", "port": 5432, "ssl_enabled": True}
+```
+
+### 2. Generics & `TypeVar`
+```python
+from typing import TypeVar, Generic
+
+T = TypeVar("T")
+
+class Stack(Generic[T]):
+    def __init__(self):
+        self._items: list[T] = []
+    def push(self, item: T) -> None: self._items.append(item)
+    def pop(self) -> T: return self._items.pop()
+
+int_stack = Stack[int]()
+int_stack.push(10)
+# int_stack.push("error") # ❌ Caught by static type checker!
+```
+
+---
+
+## 5. Advanced `pytest`: Built-in Fixtures (`tmp_path`, `monkeypatch`) & Mocking
+
+`pytest` provides built-in enterprise fixtures out of the box:
+
+### 1. `tmp_path`: Isolated Temporary Directory
+```python
+def test_file_write_operations(tmp_path):
+    # tmp_path is a pathlib.Path pointing to an isolated temp folder created per test:
+    test_file = tmp_path / "test_data.txt"
+    test_file.write_text("hello world", encoding="utf-8")
+    assert test_file.read_text(encoding="utf-8") == "hello world"
+```
+
+### 2. `monkeypatch` & `unittest.mock`: Mocking Network / External Calls
+```python
+from unittest.mock import Mock
+
+def test_payment_processing_with_mock(monkeypatch):
+    # Mock an external third-party payment gateway API:
+    mock_gateway = Mock()
+    mock_gateway.charge.return_value = {"status": "SUCCESS", "txn_id": "TXN-999"}
+
+    result = mock_gateway.charge(amount=100.0)
+    assert result["status"] == "SUCCESS"
+    mock_gateway.charge.assert_called_once_with(amount=100.0)
 ```
 
 ---
@@ -236,6 +287,58 @@ if __name__ == "__main__":
 
 ---
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master type hints, Generics, TypedDict, pytest assertions, fixtures, parameterization, and mocking:
+
+---
+
+### 🟢 Tier 1: Modern Type Annotations (Exercises 1–3)
+
+#### 🔹 Exercise 1: Union & Optional Typing
+* **Goal**: Annotate a function `find_user_score(user_id: int) -> float | None`.
+
+#### 🔹 Exercise 2: Literal Type Restriction
+* **Goal**: Define `EnvironmentType = Literal["local", "dev", "prod"]`. Annotate `start_server(env: EnvironmentType) -> bool`.
+
+#### 🔹 Exercise 3: Callable Higher-Order Type Annotation
+* **Goal**: Annotate `apply_transformer(numbers: list[int], fn: Callable[[int], int]) -> list[int]`.
+
+---
+
+### 🟡 Tier 2: TypedDict & Generics (Exercises 4–6)
+
+#### 🔹 Exercise 4: TypedDict Schema Definition
+* **Goal**: Define `UserProfile(TypedDict)` with required `id: int`, `username: str`, and optional `bio: NotRequired[str]`.
+
+#### 🔹 Exercise 5: Generic Box Container with `TypeVar`
+* **Goal**: Implement `class Box(Generic[T])` with `set_item(val: T)` and `get_item() -> T`.
+
+#### 🔹 Exercise 6: Generic Key-Value Repository
+* **Goal**: Implement `class KeyValueStore(Generic[K, V])` with `put(k: K, v: V)` and `get(k: K) -> V | None`.
+
+---
+
+### 🟠 Tier 3: Pytest Assertions & Test Automation (Exercises 7–9)
+
+#### 🔹 Exercise 7: Exception Testing with `pytest.raises`
+* **Goal**: Write a pytest unit test asserting that `divide(10, 0)` raises `ZeroDivisionError`.
+
+#### 🔹 Exercise 8: Parameterized Table Testing with `@pytest.mark.parametrize`
+* **Goal**: Test an `is_palindrome(text: str) -> bool` function against 6 diverse inputs using `@pytest.mark.parametrize`.
+
+#### 🔹 Exercise 9: Fixture Setup & Teardown Lifecycle
+* **Goal**: Create a fixture `@pytest.fixture def database_connection()` creating a test DB and closing it after `yield`.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: User Registration Security Validator with Full Pytest Suite
+* **Goal**: Write an enterprise user registration validator with full static type hints and an exhaustive automated unit test suite.
+
+---
+
 ## 📝 Quick Exercise: User Authentication Security Validator with Full Pytest Test Suite
 
 ### 🏢 Real-Life Scenario
@@ -271,21 +374,21 @@ ALL AUTOMATED REGISTRATION TESTS PASSED ✅
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Validator Suite & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: User Registration Validator & Test Suite
+# =====================================================================
 import pytest
 
-# 1. Validation Logic (Level 1 & 2)
 def validate_user_registration(email: str, password: str) -> tuple[bool, str]:
-    # Email syntax check
     if "@" not in email:
         return False, "Invalid email format"
     domain_part = email.split("@")[1]
     if "." not in domain_part:
         return False, "Invalid email format"
 
-    # Password policy checks
     if len(password) < 8:
         return False, "Password must be at least 8 characters long"
     if not any(c.isdigit() for c in password):
@@ -296,7 +399,6 @@ def validate_user_registration(email: str, password: str) -> tuple[bool, str]:
     return True, "Registration credentials valid"
 
 
-# 2. Pytest Test Suite (Level 2)
 class TestUserRegistrationSuite:
 
     @pytest.mark.parametrize("email, password", [
@@ -330,24 +432,20 @@ class TestUserRegistrationSuite:
         assert expected_error_fragment in msg
 
 
-# 3. Test Runner Execution
 if __name__ == "__main__":
     suite = TestUserRegistrationSuite()
     print("==================================================")
     print("       USER SECURITY REGISTRATION TEST SUITE      ")
     print("==================================================")
     
-    # Run valid cases
     for em, pw in [("admin@enterprise.com", "SecurePass123"), ("elena@cloud.io", "AlphaBeta99")]:
         suite.test_valid_registration(em, pw)
     print("  ✓ test_valid_registration (3 Cases) PASSED")
 
-    # Run email failures
     for be in ["plainaddress", "user@nodot", "@missinguser.com"]:
         suite.test_invalid_email_formats(be)
     print("  ✓ test_invalid_email_formats (3 Cases) PASSED")
 
-    # Run password failures
     for bp, frag in [("Short1", "8 characters"), ("nocaps123", "uppercase"), ("NoDigitsHere", "digit")]:
         suite.test_password_policy_failures(bp, frag)
     print("  ✓ test_password_policy_failures (3 Cases) PASSED")
@@ -355,9 +453,59 @@ if __name__ == "__main__":
     print("--------------------------------------------------")
     print("ALL AUTOMATED REGISTRATION TESTS PASSED ✅")
     print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `validate_user_registration` checks email format and password strength requirements systematically.
-- `@pytest.mark.parametrize` tests boundary cases cleanly without repetitive boilerplate code.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+def find_user_score(user_id: int) -> float | None:
+    return 95.5 if user_id == 1 else None
+
+# Ex 2:
+from typing import Literal, Callable, TypedDict, NotRequired, TypeVar, Generic
+EnvironmentType = Literal["local", "dev", "prod"]
+def start_server(env: EnvironmentType) -> bool: return True
+
+# Ex 3:
+def apply_transformer(numbers: list[int], fn: Callable[[int], int]) -> list[int]:
+    return [fn(x) for x in numbers]
+
+# Ex 4:
+class UserProfile(TypedDict):
+    id: int
+    username: str
+    bio: NotRequired[str]
+
+# Ex 5:
+T = TypeVar("T")
+class Box(Generic[T]):
+    def __init__(self, val: T): self.val = val
+    def get_item(self) -> T: return self.val
+
+# Ex 6:
+K = TypeVar("K")
+V = TypeVar("V")
+class KeyValueStore(Generic[K, V]):
+    def __init__(self): self._d: dict[K, V] = {}
+    def put(self, k: K, v: V): self._d[k] = v
+    def get(self, k: K) -> V | None: return self._d.get(k)
+
+# Ex 7:
+def test_zero_division():
+    with pytest.raises(ZeroDivisionError):
+        _ = 10 / 0
+
+# Ex 8:
+@pytest.mark.parametrize("word, expected", [("radar", True), ("hello", False), ("level", True)])
+def test_palindrome(word, expected):
+    assert (word == word[::-1]) == expected
+
+# Ex 9:
+@pytest.fixture
+def database_connection():
+    db = {"connected": True}
+    yield db
+    db["connected"] = False
+```
 </details>
+

@@ -92,29 +92,110 @@ def traverse_in_order(node: TreeNode | None, result: list) -> None:
 
 ---
 
-## 3. Priority Heaps with `heapq`
+---
 
-A **Binary Heap** is a complete binary tree where parent nodes are always smaller than (Min-Heap) or larger than (Max-Heap) their children. In Python, heaps are stored compactly as plain lists where:
-- Left child of index $i$: $2i + 1$
-- Right child of index $i$: $2i + 2$
-- Parent of index $i$: $\lfloor\frac{i - 1}{2}\rfloor$
+## 4. Balanced Trees & Production Indexing (AVL, Red-Black & B-Trees)
+
+When inserting pre-sorted data ($1 \to 2 \to 3 \to 4 \to 5$) into a naive BST, the tree degenerates into a singly linked list with disastrous $\mathcal{O}(n)$ search performance. Production engines solve this through **Self-Balancing Trees**:
+
+- **AVL Trees**: Strictly balanced with height difference (balance factor) between left and right subtrees $\le 1$, maintained via tree rotations.
+- **Red-Black Trees**: Used in C++ `std::map` and Linux CFS process scheduler, requiring at most 2 rotations per insertion.
+- **B-Trees / B+ Trees**: High branching factor trees designed for block-storage disk drives and relational database indexes (PostgreSQL, MySQL InnoDB), minimizing disk I/O seek operations.
+
+---
+
+## 5. Under the Hood: $\mathcal{O}(n)$ `heapq.heapify` vs $\mathcal{O}(n \log n)$ Pushes
+
+Building a heap from an existing list can be performed in **$\mathcal{O}(n)$ linear time** using Floyd's build-heap algorithm (`heapq.heapify()`), whereas iteratively calling `heappush()` takes $\mathcal{O}(n \log n)$:
 
 ```python
 import heapq
 
-# Python's heapq implements a Min-Heap
-task_heap = []
-
-# heappush: O(log n) insertion
-heapq.heappush(task_heap, (1, "CRITICAL: Database Failure"))
-heapq.heappush(task_heap, (3, "LOW: Clean temp logs"))
-heapq.heappush(task_heap, (2, "MEDIUM: High memory warning"))
-
-# heappop: O(log n) extraction of highest priority (smallest number)
-priority, task_name = heapq.heappop(task_heap)
-print(f"Dispatched Top Priority ({priority}): {task_name}")
-# Dispatched Top Priority (1): CRITICAL: Database Failure
+raw_scores = [45, 12, 89, 23, 7, 66]
+# Transforms list in-place into valid Min-Heap in O(n) time:
+heapq.heapify(raw_scores)
+print(raw_scores) # [7, 12, 66, 23, 45, 89]
 ```
+
+---
+
+## 6. Breadth-First Search (BFS) / Level-Order Tree Traversal
+
+While DFS traversals use recursion (call stack), Level-Order traversal explores nodes horizon-by-horizon using a FIFO Queue (`deque`):
+
+```python
+from collections import deque
+
+def level_order_traversal(root: TreeNode | None) -> list[list[int]]:
+    if not root: return []
+    levels = []
+    queue = deque([root])
+
+    while queue:
+        level_size = len(queue)
+        current_level = []
+        for _ in range(level_size):
+            node = queue.popleft()
+            current_level.append(node.key)
+            if node.left: queue.append(node.left)
+            if node.right: queue.append(node.right)
+        levels.append(current_level)
+    return levels
+```
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master trees, BST validation, DFS/BFS traversals, and priority heaps:
+
+---
+
+### 🟢 Tier 1: BST Construction & Heap Basics (Exercises 1–3)
+
+#### 🔹 Exercise 1: Calculate Maximum Depth of Binary Tree
+* **Goal**: Write recursive `max_depth(root: TreeNode) -> int` returning the maximum path length from root to leaf.
+
+#### 🔹 Exercise 2: Top $K$ Smallest Elements with `heapq`
+* **Goal**: Use `heapq.nsmallest(k, arr)` and custom min-heap to extract top 3 lowest prices in $\mathcal{O}(n \log k)$ time.
+
+#### 🔹 Exercise 3: Leaf Node Counter
+* **Goal**: Implement `count_leaves(root: TreeNode) -> int` counting nodes with no children.
+
+---
+
+### 🟡 Tier 2: Validations & Traversals (Exercises 4–6)
+
+#### 🔹 Exercise 4: Validate Binary Search Tree (BST Invariant)
+* **Goal**: Write `is_valid_bst(root: TreeNode) -> bool` validating that every node strictly adheres to left/right bounding constraints $(-\infty, \infty)$.
+
+#### 🔹 Exercise 5: Lowest Common Ancestor (LCA) in BST
+* **Goal**: Find the lowest common ancestor node for two given keys in a BST in $\mathcal{O}(\log n)$ time.
+
+#### 🔹 Exercise 6: In-Order Successor in BST
+* **Goal**: Find the node with the smallest key strictly greater than a given target key.
+
+---
+
+### 🟠 Tier 3: Heap Architectures & Inversions (Exercises 7–9)
+
+#### 🔹 Exercise 7: Invert / Mirror Binary Tree
+* **Goal**: Invert a binary tree in-place by swapping left and right child pointers at every level.
+
+#### 🔹 Exercise 8: Top $K$ Frequent Elements with Min-Heap
+* **Goal**: Given an array of strings, return the $K$ most frequent elements in $\mathcal{O}(n \log k)$ time using `Counter` and a Min-Heap.
+
+#### 🔹 Exercise 9: Merge $K$ Sorted Streams with Min-Heap
+* **Goal**: Merge $K$ sorted lists of integers into a single sorted list in $\mathcal{O}(N \log K)$ time using `heapq`.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Real-Time CPU Priority Process Dispatcher
+* **Goal**: Build an RTOS process priority scheduler using Min-Heaps and custom `__lt__` task structures.
+
+---
 
 ---
 
@@ -285,12 +366,14 @@ You are developing the CPU process scheduler for a real-time operating system (R
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Scheduler & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Kernel CPU Priority Scheduler
+# =====================================================================
 import heapq
 
-# 1. Domain Task Entity with Heap Comparator (Level 2 & 3)
 class CPUTask:
     def __init__(self, priority: int, pid: str, task_name: str, duration_ms: int):
         self.priority = priority
@@ -299,14 +382,12 @@ class CPUTask:
         self.duration_ms = duration_ms
 
     def __lt__(self, other: 'CPUTask') -> bool:
-        # Min-Heap orders by lower numerical priority first
         return self.priority < other.priority
 
     def __str__(self) -> str:
         return f"[DISPATCHED] PID: {self.pid:<10} | Priority: {self.priority} | {self.task_name} ({self.duration_ms}ms)"
 
 
-# 2. Kernel Priority Scheduler (Level 3)
 class KernelPriorityScheduler:
     def __init__(self):
         self._heap: list[CPUTask] = []
@@ -324,7 +405,6 @@ class KernelPriorityScheduler:
         print("==================================================")
 
 
-# 3. Execution Run
 scheduler = KernelPriorityScheduler()
 scheduler.add_task(CPUTask(priority=5, pid="BKG-99", task_name="Background Log Compression", duration_ms=150))
 scheduler.add_task(CPUTask(priority=1, pid="KERNEL-01", task_name="Hardware Interrupt Handler", duration_ms=5))
@@ -332,9 +412,80 @@ scheduler.add_task(CPUTask(priority=3, pid="AUDIO-09", task_name="Real-Time Audi
 scheduler.add_task(CPUTask(priority=2, pid="NET-04", task_name="Socket Packet Ingest", duration_ms=12))
 
 scheduler.execute_all()
-```
 
-**Explanation of the Solution:**
-- Implementing `__lt__` allows `heapq` to order custom `CPUTask` instances directly in Min-Heap storage.
-- Tasks arrive out of order and are dispatched strictly in ascending order of priority rank.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+class TreeNode:
+    def __init__(self, key=0, val=None, left=None, right=None):
+        self.key, self.val, self.left, self.right = key, val, left, right
+
+# Ex 1: Maximum Depth of Binary Tree
+def max_depth(root: TreeNode | None) -> int:
+    if not root: return 0
+    return 1 + max(max_depth(root.left), max_depth(root.right))
+
+# Ex 2: Top K Smallest Elements with heapq
+def top_k_smallest(arr: list[int], k: int) -> list[int]:
+    return heapq.nsmallest(k, arr)
+
+# Ex 3: Count Leaf Nodes
+def count_leaves(root: TreeNode | None) -> int:
+    if not root: return 0
+    if not root.left and not root.right: return 1
+    return count_leaves(root.left) + count_leaves(root.right)
+
+# Ex 4: Validate BST Invariant
+def is_valid_bst(root: TreeNode | None, min_val=float('-inf'), max_val=float('inf')) -> bool:
+    if not root: return True
+    if not (min_val < root.key < max_val): return False
+    return is_valid_bst(root.left, min_val, root.key) and is_valid_bst(root.right, root.key, max_val)
+
+# Ex 5: LCA in BST
+def lowest_common_ancestor(root: TreeNode, p: int, q: int) -> TreeNode:
+    curr = root
+    while curr:
+        if p < curr.key and q < curr.key: curr = curr.left
+        elif p > curr.key and q > curr.key: curr = curr.right
+        else: return curr
+
+# Ex 6: In-Order Successor in BST
+def inorder_successor(root: TreeNode, target_key: int) -> TreeNode | None:
+    successor = None
+    curr = root
+    while curr:
+        if curr.key > target_key:
+            successor = curr
+            curr = curr.left
+        else:
+            curr = curr.right
+    return successor
+
+# Ex 7: Invert Binary Tree
+def invert_tree(root: TreeNode | None) -> TreeNode | None:
+    if not root: return None
+    root.left, root.right = invert_tree(root.right), invert_tree(root.left)
+    return root
+
+# Ex 8: Top K Frequent Elements
+from collections import Counter
+def top_k_frequent(words: list[str], k: int) -> list[str]:
+    counts = Counter(words)
+    # Min-Heap of size k: (freq, word)
+    return [item[0] for item in counts.most_common(k)]
+
+# Ex 9: Merge K Sorted Lists
+def merge_k_sorted(lists: list[list[int]]) -> list[int]:
+    heap = []
+    for i, lst in enumerate(lists):
+        if lst: heapq.heappush(heap, (lst[0], i, 0))
+    res = []
+    while heap:
+        val, list_idx, elem_idx = heapq.heappop(heap)
+        res.append(val)
+        if elem_idx + 1 < len(lists[list_idx]):
+            next_val = lists[list_idx][elem_idx + 1]
+            heapq.heappush(heap, (next_val, list_idx, elem_idx + 1))
+    return res
+```
 </details>

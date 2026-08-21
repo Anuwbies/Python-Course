@@ -65,13 +65,21 @@ print(f"Gross Pay: ${gross_pay:,.2f}")
 
 ---
 
-## 3. The Boolean Casting Truthiness Trap
+## 3. The Boolean Casting Truthiness Trap & Truth Value Testing
 
 A frequent bug for beginners is trying to cast `"False"` to a boolean using `bool("False")`.
 
-In Python, `bool()` evaluates **truthiness**:
-- Any non-empty string evaluates to `True` (including `"False"`, `"0"`, and `"   "`).
-- Only the empty string `""` evaluates to `False`.
+In Python, `bool()` evaluates **truthiness** according to Python's data model:
+
+### 📊 Python Truth Value Reference Table
+
+| Data Type | Falsy Values (`bool(x) == False`) | Truthy Values (`bool(x) == True`) |
+| :--- | :--- | :--- |
+| **Numeric** | `0`, `0.0`, `0j` | Any non-zero number (`1`, `-5`, `0.0001`) |
+| **Strings** | `""` (Empty string) | Any string with $\ge 1$ char (`"False"`, `"0"`, `"   "`) |
+| **Sequences** | `[]` (Empty list), `()` (Empty tuple) | Non-empty collections (`[0]`, `("",)`) |
+| **Mappings** | `{}` (Empty dict), `set()` (Empty set) | Non-empty mappings (`{"key": "val"}`) |
+| **Constants** | `None`, `False` | `True` |
 
 ```python
 # ❌ INCORRECT:
@@ -79,19 +87,21 @@ is_subscribed = bool(input("Subscribe? (True/False): ")) # Typing "False" produc
 
 # ✅ CORRECT: Compare against expected strings:
 raw_answer = input("Subscribe? (yes/no): ").strip().lower()
-is_subscribed = raw_answer == "yes"
+is_subscribed = raw_answer in ("yes", "y", "true", "1")
 ```
 
 ---
 
 ## 4. String Sanitization & Method Chaining
 
-Users frequently include accidental leading/trailing spaces or unpredictable capitalization. Python provides string methods to sanitize raw inputs:
+Users frequently enter accidental leading/trailing spaces, mixed capitalization, or unwanted characters.
 
 ```python
-# 1. Stripping unwanted whitespace:
+# 1. Stripping unwanted whitespace (left, right, or both):
 raw_email = "   engineer@enterprise.io   \n"
-clean_email = raw_email.strip() # "engineer@enterprise.io"
+print(raw_email.strip())  # "engineer@enterprise.io"
+print(raw_email.lstrip()) # "engineer@enterprise.io   \n" (removes leading only)
+print(raw_email.rstrip()) # "   engineer@enterprise.io" (removes trailing only)
 
 # 2. Case normalization:
 city_input = "  sAn fRaNcIsCo  "
@@ -99,9 +109,26 @@ print(city_input.strip().title()) # "San Francisco"
 print(city_input.strip().upper()) # "SAN FRANCISCO"
 print(city_input.strip().lower()) # "san francisco"
 
-# 3. Method Chaining:
+# 3. Numeric string validation before casting:
+age_input = input("Enter age: ").strip()
+if age_input.isdigit(): # Safe: ensures string contains only digits 0-9
+    valid_age = int(age_input)
+else:
+    valid_age = 0 # Fallback safety
+
+# 4. Method Chaining:
 command = input("Enter action (START / STOP): ").strip().upper()
 ```
+
+---
+
+## 5. Input Buffer & Stream Mechanics (How `input()` Works Internally)
+
+When `input("prompt")` runs:
+1. Python writes the prompt string to `sys.stdout`.
+2. Python halts execution and reads from the operating system's standard input stream (`sys.stdin`).
+3. When the user hits `[Enter]`, the OS sends the line buffer (including `\n`).
+4. `input()` strips the trailing newline character `\n` and returns the resulting `str`.
 
 ---
 
@@ -169,6 +196,69 @@ print("=" * 65)
 
 ---
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master interactive user input, safe casting, string sanitization, and boolean truth value evaluation:
+
+---
+
+### 🟢 Tier 1: Basic Input & Simple Casting (Exercises 1–3)
+
+#### 🔹 Exercise 1: Name & Greeting Formatter
+* **Goal**: Prompt the user for their first and last name.
+* **Requirement**: Strip excess whitespace, format into Title Case, and print `"Welcome, <First Last>!"`.
+
+#### 🔹 Exercise 2: Age in Months Calculator
+* **Goal**: Prompt the user for their age in whole years.
+* **Requirement**: Cast to `int`, compute total months (`age * 12`), and print `"You are at least X months old."`.
+
+#### 🔹 Exercise 3: Currency Tip Estimator
+* **Goal**: Prompt the user for a restaurant bill subtotal ($).
+* **Requirement**: Cast to `float`, calculate 15% and 20% tips, and print both formatted to 2 decimal places.
+
+---
+
+### 🟡 Tier 2: Sanitization & Safe Boolean Parsing (Exercises 4–6)
+
+#### 🔹 Exercise 4: Email Domain Extractor
+* **Goal**: Prompt for an email address (e.g. `"  alex@ENTERPRISE.COM  "`).
+* **Requirement**: Clean using `.strip().lower()`, extract the domain part after `"@"`, and print the sanitized domain.
+
+#### 🔹 Exercise 5: Robust Boolean Confirmation Prompt
+* **Goal**: Prompt the user `"Do you agree to terms? (yes/no): "`.
+* **Requirement**: Normalize with `.strip().lower()`, evaluate if the response is in `("yes", "y", "true")`, and store as a `bool` variable `agreed`. Print `f"Agreement Status: {agreed}"`.
+
+#### 🔹 Exercise 6: Secure PIN Input Validator
+* **Goal**: Prompt for a 4-digit security PIN.
+* **Requirement**: Verify if `.isdigit()` is `True` and `len()` equals 4. Store as a boolean `is_valid_pin` and print the outcome.
+
+---
+
+### 🟠 Tier 3: Multi-Step Input Processing (Exercises 7–9)
+
+#### 🔹 Exercise 7: Fuel Economy & Road Trip Cost Estimator
+* **Goal**: Prompt for total road trip distance (miles), car fuel efficiency (MPG), and gas price per gallon ($).
+* **Requirement**: Cast all to `float`, compute total gallons required (`distance / mpg`) and total fuel cost (`gallons * price`). Print an itemized trip summary.
+
+#### 🔹 Exercise 8: Body Mass Index (BMI) Diagnostic Calculator
+* **Goal**: Prompt for weight in kilograms (`float`) and height in meters (`float`).
+* **Calculation**: $\text{BMI} = \frac{\text{weight}}{\text{height}^2}$.
+* **Requirement**: Compute and print BMI rounded to 2 decimal places.
+
+#### 🔹 Exercise 9: Server Cluster Resource Allocation Quota
+* **Goal**: Prompt for cluster name (`str`), number of active virtual machines (`int`), CPU cores per VM (`int`), and RAM per VM in GB (`float`).
+* **Calculation**: Total cores = `vms * cores_per_vm`, Total RAM = `vms * ram_per_vm`.
+* **Requirement**: Print a formatted cluster capacity card.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Freelance Invoicing & Tax Estimator Utility
+* **Goal**: Combine text sanitization, numerical casting, multi-step math calculations, and formatted financial reporting.
+
+---
+
 ## 📝 Quick Exercise: Freelance Billing & Invoice Calculator
 
 ### 🏢 Real-Life Scenario
@@ -219,25 +309,24 @@ NET EARNINGS:  $2,248.74
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Freelance & 10 Challenges)</b></summary>
 
 ```python
-# 1. Capture and sanitize text inputs (Lesson 1 & 2)
+# =====================================================================
+# SOLUTION: Freelance Invoice Calculator
+# =====================================================================
 client_name = input("Enter client business name: ").strip().title()
 project_title = input("Enter project title: ").strip()
 
-# 2. Capture and cast numeric inputs (Lesson 2)
 hourly_rate = float(input("Enter hourly billing rate ($): "))
 hours_worked = float(input("Enter total billable hours: "))
 expenses = float(input("Enter cloud/hardware expenses incurred ($): "))
 
-# 3. Perform calculations (Lesson 1 & 2)
 labor_cost = hourly_rate * hours_worked
 invoice_total = labor_cost + expenses
 tax_withholding = invoice_total * 0.22
 net_earnings = invoice_total - tax_withholding
 
-# 4. Formatted invoice display (Lesson 1 f-strings)
 print("\n==================================================")
 print("           FREELANCE INVOICE SUMMARY              ")
 print("==================================================")
@@ -252,10 +341,56 @@ print(f"INVOICE TOTAL: ${invoice_total:,.2f}")
 print(f"Est. Tax (22%):${tax_withholding:,.2f}")
 print(f"NET EARNINGS:  ${net_earnings:,.2f}")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- Input strings are sanitized at capture time using `.strip()` and `.title()`.
-- Floating-point casting enables math calculations on user-provided financial rates.
-- `f"{val:,.2f}"` produces professional dollar-and-cent formatting.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+first = input("First name: ").strip().title()
+last = input("Last name: ").strip().title()
+print(f"Welcome, {first} {last}!")
+
+# Ex 2:
+age_years = int(input("Enter age in years: ").strip())
+print(f"You are at least {age_years * 12} months old.")
+
+# Ex 3:
+bill = float(input("Enter subtotal ($): "))
+print(f"15% Tip: ${bill * 0.15:.2f} | 20% Tip: ${bill * 0.20:.2f}")
+
+# Ex 4:
+raw_email = input("Enter email: ").strip().lower()
+domain = raw_email.split("@")[-1] if "@" in raw_email else "invalid"
+print(f"Domain: {domain}")
+
+# Ex 5:
+agreed = input("Agree? (yes/no): ").strip().lower() in ("yes", "y", "true")
+print(f"Agreement Status: {agreed}")
+
+# Ex 6:
+pin = input("Enter 4-digit PIN: ").strip()
+is_valid_pin = pin.isdigit() and len(pin) == 4
+print(f"Valid PIN: {is_valid_pin}")
+
+# Ex 7:
+dist = float(input("Miles: "))
+mpg = float(input("MPG: "))
+gas_price = float(input("Price/Gal: "))
+gallons = dist / mpg
+cost = gallons * gas_price
+print(f"Fuel Needed: {gallons:.1f} gal | Cost: ${cost:.2f}")
+
+# Ex 8:
+weight = float(input("Weight (kg): "))
+height = float(input("Height (m): "))
+bmi = weight / (height ** 2)
+print(f"Calculated BMI: {bmi:.2f}")
+
+# Ex 9:
+c_name = input("Cluster: ").strip()
+vms = int(input("VMs: "))
+cores = int(input("Cores/VM: "))
+ram = float(input("RAM/VM (GB): "))
+print(f"Cluster [{c_name}]: {vms * cores} Total Cores, {vms * ram:.1f} Total GB RAM")
+```
 </details>

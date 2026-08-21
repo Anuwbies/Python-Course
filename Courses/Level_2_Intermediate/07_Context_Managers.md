@@ -75,26 +75,55 @@ print("Program continues safely after suppressed error.")
 
 ---
 
-## 3. Generator Context Managers with `contextlib`
+---
 
-Writing class boilerplate for simple setups can be verbose. The `@contextlib.contextmanager` decorator converts a simple generator function into a full context manager using a `try...yield...finally` pattern:
+## 4. Advanced Resource Orchestration with `contextlib.ExitStack`
+
+When you need to open an arbitrary, dynamic number of resources (such as opening 10 files simultaneously whose filenames are supplied at runtime), nesting `with` statements becomes impossible. **`ExitStack`** manages a dynamic stack of context managers programmatically:
 
 ```python
+from contextlib import ExitStack
+from pathlib import Path
+
+def merge_log_files(input_paths: list[Path], output_path: Path):
+    with ExitStack() as stack:
+        # Dynamically acquire and manage all input file handles:
+        files = [stack.enter_context(open(p, "r", encoding="utf-8")) for p in input_paths]
+        out_file = stack.enter_context(open(output_path, "w", encoding="utf-8"))
+
+        for f in files:
+            out_file.write(f.read() + "\n")
+    # All files are unconditionally closed simultaneously here!
+```
+
+---
+
+## 5. Built-in `contextlib` Power Utilities
+
+Python provides ready-to-use context managers in the standard library:
+
+### 1. `contextlib.suppress(*exceptions)`
+Replaces noisy `try...except Pass:` blocks:
+```python
 import contextlib
-import time
+import os
 
-@contextlib.contextmanager
-def benchmark_timer(label: str):
-    start = time.perf_counter()
-    try:
-        yield # Code inside the 'with' block executes here
-    finally:
-        elapsed = time.perf_counter() - start
-        print(f"⏱️ [{label}] Execution completed in {elapsed * 1000:.2f} ms")
+# Safely remove file without crashing if it doesn't exist:
+with contextlib.suppress(FileNotFoundError):
+    os.remove("temp_cache.tmp")
+```
 
-with benchmark_timer("Data Ingestion Stage"):
-    # Simulate work
-    time.sleep(0.02)
+### 2. `contextlib.redirect_stdout`
+Redirects `print()` outputs directly to a file or in-memory string stream:
+```python
+import io
+import contextlib
+
+buffer = io.StringIO()
+with contextlib.redirect_stdout(buffer):
+    print("This goes into the buffer, not the terminal!")
+
+captured_text = buffer.getvalue()
 ```
 
 ---
@@ -208,6 +237,60 @@ print("=" * 70)
 
 ## 📝 Quick Exercise: Temporary API Key Lease & Sandbox Isolation Context Manager
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master the context manager protocol, `__enter__`, `__exit__`, error suppression, `contextlib.contextmanager`, `ExitStack`, and resource leasing:
+
+---
+
+### 🟢 Tier 1: Basic Context Managers (Exercises 1–3)
+
+#### 🔹 Exercise 1: Console Header/Footer Banner Manager
+* **Goal**: Write `class BannerBox` printing `=== START ===` on enter and `=== END ===` on exit.
+
+#### 🔹 Exercise 2: File Handle Wrapper with Explicit Close
+* **Goal**: Implement `class ManagedFileReader` wrapping a file open/close lifecycle using `__enter__` and `__exit__`.
+
+#### 🔹 Exercise 3: Temporary Working Directory Switcher
+* **Goal**: Using `os.chdir()`, write `class ChangeDir(target_path)` switching directory on enter and restoring previous path on exit.
+
+---
+
+### 🟡 Tier 2: Exception Handling & Generator Contexts (Exercises 4–6)
+
+#### 🔹 Exercise 4: Selective Error Suppressor
+* **Goal**: Class `SuppressSpecific(*exceptions)` returning `True` in `__exit__` only if raised error matches given types.
+
+#### 🔹 Exercise 5: Benchmark Timer with `@contextlib.contextmanager`
+* **Goal**: Write `@contextmanager def time_block(label: str)` yielding control and printing elapsed milliseconds in `finally`.
+
+#### 🔹 Exercise 6: In-Memory List Snapshot Rollback
+* **Goal**: Write `@contextmanager def list_transaction(target_list)` deep-copying list on enter and restoring on exception.
+
+---
+
+### 🟠 Tier 3: Advanced Resource Orchestration (Exercises 7–9)
+
+#### 🔹 Exercise 7: Dynamic Multi-File Merger with `contextlib.ExitStack`
+* **Goal**: Use `ExitStack` to open $N$ dynamic input text files and concatenate their contents into a master file.
+
+#### 🔹 Exercise 8: Temporary Mock System Config
+* **Goal**: Generator context manager overriding `os.environ` keys during the `with` block and restoring them afterwards.
+
+#### 🔹 Exercise 9: Stdout Output Interceptor
+* **Goal**: Write `@contextmanager def capture_stdout()` redirecting `sys.stdout` to a `StringIO` buffer and returning the captured string.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Temporary API Key Lease & Sandbox Isolation Context Manager
+* **Goal**: Implement `SecureSessionLease` class manager with safe error suppression, paired with `@temporary_env_var` configuration sandbox.
+
+---
+
+## 📝 Quick Exercise: Temporary API Key Lease & Sandbox Isolation Context Manager
+
 ### 🏢 Real-Life Scenario
 You are developing a secure multi-tenant cloud test runner. Test suites require leasing a temporary cryptographic API token and executing in an isolated sandbox environment. When the test finishes (or crashes with an assertion error), the context manager must revoke the token, clean up allocated test files, and return resource metrics.
 
@@ -251,12 +334,14 @@ Program completed all test runs safely.
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Session Lease & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Secure Session Lease Engine
+# =====================================================================
 import contextlib
 
-# 1. Class-Based Session Context Manager (Level 2)
 class SecureSessionLease:
     def __init__(self, session_id: str, tenant_name: str):
         self.session_id = session_id
@@ -273,10 +358,9 @@ class SecureSessionLease:
         print(f"🔒 [SESSION REVOKED] ID: {self.session_id} has been revoked and purged")
         if exc_type is not None:
             print(f"⚠️ Session terminated due to error: {exc_val}")
-            return True # Suppress error for clean test runner shutdown
+            return True
 
 
-# 2. Generator-Based Environment Variable Context Manager (Level 2)
 @contextlib.contextmanager
 def temporary_env_var(env_dict: dict, key: str, value: str):
     had_key = key in env_dict
@@ -291,28 +375,96 @@ def temporary_env_var(env_dict: dict, key: str, value: str):
             env_dict.pop(key, None)
 
 
-# 3. Execution Simulation
 print("==================================================")
 print("        SECURE API SESSION & CONTEXT RUNNER       ")
 print("==================================================")
 
-# Test 1: Clean test run
 with SecureSessionLease("SESS-909", "Alpha Corp") as session:
     print(f"  -> Running integration tests with API Token: {session.session_id}")
     print(f"  -> Active status: {session.is_active}")
 
 print()
 
-# Test 2: Test run with suppressed error
 with SecureSessionLease("SESS-910", "Beta LLC") as session:
     print("  -> Running test that encounters runtime assertion...")
     raise TimeoutError("Simulated API Timeout")
 
 print("Program completed all test runs safely.")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `SecureSessionLease.__enter__` initializes credentials, and `__exit__` guarantees revocation even if the inner code raises `TimeoutError`.
-- Returning `True` from `__exit__` suppresses the runtime test error, allowing the test suite runner to proceed.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+class BannerBox:
+    def __enter__(self): print("=== START ==="); return self
+    def __exit__(self, *a): print("=== END ===")
+
+# Ex 2:
+class ManagedFileReader:
+    def __init__(self, path: str, mode="r"): self.p, self.m = path, mode
+    def __enter__(self): self.f = open(self.p, self.m); return self.f
+    def __exit__(self, *a): self.f.close()
+
+# Ex 3:
+import os
+class ChangeDir:
+    def __init__(self, p): self.p, self.prev = p, None
+    def __enter__(self): self.prev = os.getcwd(); os.chdir(self.p)
+    def __exit__(self, *a): os.chdir(self.prev)
+
+# Ex 4:
+class SuppressSpecific:
+    def __init__(self, *errs): self.errs = errs
+    def __enter__(self): return self
+    def __exit__(self, t, v, tb): return t is not None and issubclass(t, self.errs)
+
+# Ex 5:
+import time
+@contextlib.contextmanager
+def time_block(label: str):
+    t0 = time.perf_counter()
+    try: yield
+    finally: print(f"{label}: {(time.perf_counter()-t0)*1000:.2f}ms")
+
+# Ex 6:
+import copy
+@contextlib.contextmanager
+def list_transaction(lst):
+    snap = copy.deepcopy(lst)
+    try: yield lst
+    except Exception:
+        lst.clear()
+        lst.extend(snap)
+        raise
+
+# Ex 7:
+from contextlib import ExitStack
+def merge_files(paths, out):
+    with ExitStack() as s:
+        ins = [s.enter_context(open(p)) for p in paths]
+        o = s.enter_context(open(out, "w"))
+        for f in ins: o.write(f.read() + "\n")
+
+# Ex 8:
+@contextlib.contextmanager
+def mock_env(k, v):
+    old = os.environ.get(k)
+    os.environ[k] = v
+    try: yield
+    finally:
+        if old is None: os.environ.pop(k, None)
+        else: os.environ[k] = old
+
+# Ex 9:
+import io, sys
+@contextlib.contextmanager
+def capture_stdout():
+    buf = io.StringIO()
+    old = sys.stdout
+    sys.stdout = buf
+    try: yield buf
+    finally: sys.stdout = old
+```
 </details>
+

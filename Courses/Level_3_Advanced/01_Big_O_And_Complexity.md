@@ -128,6 +128,92 @@ print("=" * 75)
 
 ---
 
+## 4. Formal Complexity Definitions ($\mathcal{O}, \Omega, \Theta$)
+
+When evaluating algorithms, computer scientists use three distinct asymptotic bounds:
+- **$\mathcal{O}(g(n))$ (Big-O: Upper Bound)**: $f(n) \le c \cdot g(n)$ for large $n$. (Guarantees worst-case ceiling).
+- **$\Omega(g(n))$ (Big-Omega: Lower Bound)**: $f(n) \ge c \cdot g(n)$ for large $n$. (Guarantees best-case floor).
+- **$\Theta(g(n))$ (Big-Theta: Tight Bound)**: $c_1 \cdot g(n) \le f(n) \le c_2 \cdot g(n)$. (Exact asymptotic rate).
+
+```
+Operations (Time)
+  ▲
+  │                                   O(2^n) Exponential
+  │                                   O(n^2) Quadratic
+  │                                  /
+  │                                 /   O(n log n) Linearithmic
+  │                                /   /
+  │                               /   /   O(n) Linear
+  │                              /   /   /
+  │                             /   /   /   O(log n) Logarithmic
+  │                            /   /   /   /
+  │───────────────────────────/───/───/───/─── O(1) Constant
+  └──────────────────────────────────────────────────────────► Input Size (N)
+```
+
+---
+
+## 5. Recurrence Relations & The Master Theorem
+
+For divide-and-conquer recursive algorithms with recurrence $T(n) = a T(n/b) + \mathcal{O}(n^d)$:
+- If $d < \log_b a \implies T(n) = \mathcal{O}(n^{\log_b a})$ (e.g. Strassen matrix multiplication)
+- If $d = \log_b a \implies T(n) = \mathcal{O}(n^d \log n)$ (e.g. Merge Sort: $a=2, b=2, d=1 \implies \mathcal{O}(n \log n)$)
+- If $d > \log_b a \implies T(n) = \mathcal{O}(n^d)$
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master algorithmic complexity analysis, time-space trade-offs, and empirical benchmarking:
+
+---
+
+### 🟢 Tier 1: Asymptotic Identification & Constant Time (Exercises 1–3)
+
+#### 🔹 Exercise 1: $\mathcal{O}(1)$ Constant-Time Array Indexer
+* **Goal**: Write a function `get_middle_element(arr: list)` and prove why its time complexity is strictly $\mathcal{O}(1)$ regardless of list size.
+
+#### 🔹 Exercise 2: $\mathcal{O}(n)$ Single-Pass Accumulator
+* **Goal**: Write a function calculating the maximum and minimum in an unsorted list in a single $\mathcal{O}(n)$ pass without using `min()` and `max()` sequentially.
+
+#### 🔹 Exercise 3: $\mathcal{O}(\log n)$ Binary Search Step Counter
+* **Goal**: Implement binary search on a sorted list of 1,000,000 numbers and print the total comparison count (confirming $\le 20$ iterations).
+
+---
+
+### 🟡 Tier 2: Linearithmic vs Quadratic Algorithms (Exercises 4–6)
+
+#### 🔹 Exercise 4: Two-Sum: $\mathcal{O}(n^2)$ vs $\mathcal{O}(n)$ Benchmark
+* **Goal**: Benchmark brute-force nested loops vs Hash-Map lookup over 20,000 random integers with target sum.
+
+#### 🔹 Exercise 5: $\mathcal{O}(n \log n)$ Merge Sort Step Simulator
+* **Goal**: Implement standard recursive Merge Sort and trace the divide-and-conquer depth $\log_2(n)$.
+
+#### 🔹 Exercise 6: In-Place Matrix Transposition Space Complexity
+* **Goal**: Compare an in-place $N \times N$ matrix swap ($\mathcal{O}(1)$ auxiliary space) vs new grid allocation ($\mathcal{O}(n^2)$ space).
+
+---
+
+### 🟠 Tier 3: Amortized Analysis & Dynamic Data Structures (Exercises 7–9)
+
+#### 🔹 Exercise 7: Python List Resizing & Capacity Tracker
+* **Goal**: Use `sys.getsizeof()` inside an append loop from 1 to 100 to observe and print exact CPython over-allocation resize jumps.
+
+#### 🔹 Exercise 8: Sliding Window Maximum: $\mathcal{O}(n \cdot k)$ vs $\mathcal{O}(n)$ `deque`
+* **Goal**: Calculate rolling max over window $k$. Compare naive slice `max()` vs monotonic `collections.deque`.
+
+#### 🔹 Exercise 9: String Concatenation: $\mathcal{O}(n^2)$ `+=` vs $\mathcal{O}(n)$ `''.join()`
+* **Goal**: Measure performance of concatenating 50,000 strings using `s += chunk` vs accumulating into a list and using `"".join(list)`.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: High-Throughput Lead Deduplication Engine
+* **Goal**: Replace legacy $\mathcal{O}(n^2)$ `x in list` deduplication with an order-preserving $\mathcal{O}(n)$ Hash Set algorithm and benchmark throughput.
+
+---
+
 ## 📝 Quick Exercise: Duplicate Detection Algorithmic Optimizer & Performance Profiler
 
 ### 🏢 Real-Life Scenario
@@ -168,30 +254,30 @@ COMPLEXITY COMPARISON:
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Deduplication & 10 Challenges)</b></summary>
 
 ```python
-# 1. Quadratic Deduplication (O(n^2))
+# =====================================================================
+# SOLUTION: Lead Deduplication Benchmark
+# =====================================================================
 def deduplicate_naive_quadratic(records: list[str]) -> list[str]:
     seen = []
     for item in records:
-        if item not in seen: # O(n) linear scan on every iteration
+        if item not in seen:
             seen.append(item)
     return seen
 
 
-# 2. Optimized Linear Deduplication (O(n))
 def deduplicate_optimized_linear(records: list[str]) -> list[str]:
-    seen_set = set() # O(1) hash table lookup
+    seen_set = set()
     unique_ordered = []
     for item in records:
-        if item not in seen_set: # O(1) check
+        if item not in seen_set:
             seen_set.add(item)
             unique_ordered.append(item)
     return unique_ordered
 
 
-# 3. Verification & Execution Run
 sample_leads = [
     "alice@corp.com",
     "bob@startup.io",
@@ -206,7 +292,7 @@ sample_leads = [
 res_naive = deduplicate_naive_quadratic(sample_leads)
 res_optimized = deduplicate_optimized_linear(sample_leads)
 
-assert res_naive == res_optimized # Guarantees algorithmic parity
+assert res_naive == res_optimized
 
 print("==================================================")
 print("        LEAD DEDUPLICATION ENGINE BENCHMARK       ")
@@ -222,9 +308,87 @@ print("COMPLEXITY COMPARISON:")
 print("  - Naive List Scan:     O(n^2) Quadratic")
 print("  - Hash Set Optimized:  O(n)   Linear")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `deduplicate_naive_quadratic` performs an $\mathcal{O}(n)$ list scan inside an $\mathcal{O}(n)$ loop, resulting in $\mathcal{O}(n^2)$ quadratic slowdown.
-- `deduplicate_optimized_linear` tracks seen elements using an $\mathcal{O}(1)$ hash set while appending new items to a list, achieving true $\mathcal{O}(n)$ linear speed while preserving insertion ordering.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: O(1) Middle Element
+def get_middle(arr): return arr[len(arr) // 2] if arr else None
+
+# Ex 2: O(n) Single Pass Min/Max
+def find_min_max(arr):
+    if not arr: return None, None
+    lo, hi = arr[0], arr[0]
+    for x in arr[1:]:
+        if x < lo: lo = x
+        elif x > hi: hi = x
+    return lo, hi
+
+# Ex 3: O(log n) Binary Search with Step Counter
+def binary_search_count(arr, target):
+    lo, hi, steps = 0, len(arr) - 1, 0
+    while lo <= hi:
+        steps += 1
+        mid = (lo + hi) // 2
+        if arr[mid] == target: return mid, steps
+        elif arr[mid] < target: lo = mid + 1
+        else: hi = mid - 1
+    return -1, steps
+
+# Ex 4: Two-Sum Hash Map O(n)
+def two_sum(nums, target):
+    seen = {}
+    for i, x in enumerate(nums):
+        diff = target - x
+        if diff in seen: return seen[diff], i
+        seen[x] = i
+    return None
+
+# Ex 5: Merge Sort O(n log n)
+def merge_sort(arr):
+    if len(arr) <= 1: return arr
+    mid = len(arr) // 2
+    left, right = merge_sort(arr[:mid]), merge_sort(arr[mid:])
+    merged, i, j = [], 0, 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]: merged.append(left[i]); i += 1
+        else: merged.append(right[j]); j += 1
+    merged.extend(left[i:]); merged.extend(right[j:])
+    return merged
+
+# Ex 6: In-place Matrix Transpose O(1) space
+def transpose_in_place(matrix):
+    n = len(matrix)
+    for r in range(n):
+        for c in range(r + 1, n):
+            matrix[r][c], matrix[c][r] = matrix[c][r], matrix[r][c]
+
+# Ex 7: List Capacity Growth Tracker
+import sys
+def trace_list_growth(n=50):
+    lst = []
+    prev_sz = sys.getsizeof(lst)
+    for i in range(n):
+        lst.append(i)
+        cur_sz = sys.getsizeof(lst)
+        if cur_sz != prev_sz:
+            print(f"Len {len(lst):>3} -> Size: {cur_sz:>4} bytes (Jump: +{cur_sz-prev_sz})")
+            prev_sz = cur_sz
+
+# Ex 8: Monotonic Deque Sliding Window Max O(n)
+from collections import deque
+def sliding_window_max(nums, k):
+    dq = deque() # Stores indices
+    res = []
+    for i, n in enumerate(nums):
+        while dq and dq[0] < i - k + 1: dq.popleft()
+        while dq and nums[dq[-1]] < n: dq.pop()
+        dq.append(i)
+        if i >= k - 1: res.append(nums[dq[0]])
+    return res
+
+# Ex 9: String Joining O(n) vs += O(n^2)
+def join_benchmark(words):
+    return "".join(words)
+```
 </details>

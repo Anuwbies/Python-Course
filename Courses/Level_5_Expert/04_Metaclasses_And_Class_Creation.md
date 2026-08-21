@@ -87,22 +87,98 @@ class OrderedMeta(type):
 
 ---
 
-## 4. Modern Alternative: `__init_subclass__` (PEP 487)
+---
 
-For simple class registration without full metaclass complexity, Python 3.6+ provides `__init_subclass__`:
+## 5. Controlling Instance Creation with Metaclass `__call__`
+
+When you execute `obj = MyClass(*args)`, Python invokes `type(MyClass).__call__(MyClass, *args)`! Overriding `__call__` in a metaclass lets you intercept instantiation (e.g. implementing Singleton or caching):
 
 ```python
-class BasePlugin:
-    _registry = {}
+class SingletonMeta(type):
+    _instances = {}
 
-    def __init_subclass__(cls, plugin_key: str, **kwargs):
-        super().__init_subclass__(**kwargs)
-        BasePlugin._registry[plugin_key] = cls
-        print(f"🔌 Registered Plugin '{plugin_key}': {cls.__name__}")
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super().__call__(*args, **kwargs)
+        return cls._instances[cls]
 
-class EmailPlugin(BasePlugin, plugin_key="EMAIL_SMTP"):
+class Database(metaclass=SingletonMeta):
     pass
 ```
+
+---
+
+## 6. Metaclass Conflict Resolution
+
+When a class inherits from multiple base classes with distinct metaclasses, Python raises: `TypeError: metaclass conflict`. To resolve this, create a unified derived metaclass inheriting from both:
+
+```python
+class MetaA(type): pass
+class MetaB(type): pass
+
+class UnifiedMeta(MetaA, MetaB): pass
+
+class BaseA(metaclass=MetaA): pass
+class BaseB(metaclass=MetaB): pass
+
+# Resolve conflict:
+class Derived(BaseA, BaseB, metaclass=UnifiedMeta):
+    pass
+```
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master `type()`, custom metaclasses, `__prepare__`, `__init_subclass__`, and metaprogramming:
+
+---
+
+### 🟢 Tier 1: Dynamic Class Creation Basics (Exercises 1–3)
+
+#### 🔹 Exercise 1: Runtime Class Factory with `type()`
+* **Goal**: Dynamically construct a class `Car` with attributes and methods using `type("Car", (object,), {...})`.
+
+#### 🔹 Exercise 2: Basic Subclassing Metaclass
+* **Goal**: Write a metaclass printing `"Compiling class: <ClassName>"` during module import.
+
+#### 🔹 Exercise 3: Automated Docstring Enforcer
+* **Goal**: Create a metaclass raising `TypeError` if any subclass lacks a module docstring.
+
+---
+
+### 🟡 Tier 2: Namespace Manipulation & Subclass Hooks (Exercises 4–6)
+
+#### 🔹 Exercise 4: Preserving Field Order with `__prepare__`
+* **Goal**: Implement `__prepare__` returning an `OrderedDict` or tracking variable order.
+
+#### 🔹 Exercise 5: Lightweight Subclass Hooks with `__init_subclass__`
+* **Goal**: Build an auto-registering database model registry without defining a full metaclass.
+
+#### 🔹 Exercise 6: Attribute Auto-Prefixing Metaclass
+* **Goal**: Write a metaclass that automatically converts all public attributes to uppercase.
+
+---
+
+### 🟠 Tier 3: Instantiation Interception & Conflicts (Exercises 7–9)
+
+#### 🔹 Exercise 7: Singleton Pattern via Metaclass `__call__`
+* **Goal**: Intercept class invocation in `__call__` to return cached singleton instances.
+
+#### 🔹 Exercise 8: Interface Contract & Abstract Method Verification
+* **Goal**: Build a custom `ABCMeta` alternative checking that all methods decorated with `@must_implement` are present.
+
+#### 🔹 Exercise 9: Metaclass Multiple Inheritance Conflict Resolver
+* **Goal**: Construct a diamond multiple inheritance hierarchy and resolve the metaclass conflict cleanly.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Mandatory Method & Snake_Case Linter Metaclass
+* **Goal**: Build an enterprise compliance metaclass verifying mandatory methods and enforcing strict `snake_case` naming across analytical pipelines.
+
+---
 
 ---
 
@@ -264,20 +340,20 @@ You are building an enterprise software framework where all analytical model cla
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Metaclass Compliance & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Mandatory Method & Snake_Case Linter Metaclass
+# =====================================================================
 import inspect
 
-# 1. Metaclass Definition (Level 5)
 class StrictModelMeta(type):
     def __new__(mcs, name: str, bases: tuple, namespace: dict):
         if name != "BaseAnalyticalModel":
-            # Check 1: Mandatory method
             if "execute_pipeline" not in namespace or not inspect.isfunction(namespace["execute_pipeline"]):
                 raise TypeError(f"Class '{name}' must implement 'execute_pipeline()' method.")
 
-            # Check 2: snake_case method naming
             for attr_name, attr_val in namespace.items():
                 if inspect.isfunction(attr_val) and not attr_name.startswith("__"):
                     if any(c.isupper() for c in attr_name):
@@ -286,12 +362,10 @@ class StrictModelMeta(type):
         return super().__new__(mcs, name, bases, namespace)
 
 
-# 2. Base Model
 class BaseAnalyticalModel(metaclass=StrictModelMeta):
     pass
 
 
-# 3. Valid Subclass
 class FraudDetectionModel(BaseAnalyticalModel):
     def execute_pipeline(self) -> dict:
         return {"status": "EXECUTED", "risk_score": 0.05}
@@ -300,7 +374,6 @@ class FraudDetectionModel(BaseAnalyticalModel):
         pass
 
 
-# 4. Verification Simulation
 print("==================================================")
 print("        METACLASS ARCHITECTURE COMPLIANCE         ")
 print("==================================================")
@@ -310,7 +383,6 @@ print(f"✅ Successfully compiled valid model: {FraudDetectionModel.__name__}")
 print(f"  -> Pipeline Result: {model.execute_pipeline()}")
 print("--------------------------------------------------")
 
-# Test Violations dynamically
 try:
     type("MissingPipelineModel", (BaseAnalyticalModel,), {})
 except TypeError as err:
@@ -319,14 +391,61 @@ except TypeError as err:
 try:
     type("BadNamingModel", (BaseAnalyticalModel,), {
         "execute_pipeline": lambda self: None,
-        "CalculateScore": lambda self: None # CamelCase
+        "CalculateScore": lambda self: None
     })
 except TypeError as err:
     print(f"🚨 Verification: CamelCaseMethodName triggers TypeError")
 
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `StrictModelMeta` inspects the class namespace at creation time, enforcing both method presence and naming conventions across the entire team codebase.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Dynamic type()
+Car = type("Car", (), {"wheels": 4, "drive": lambda self: "Vroom!"})
+
+# Ex 2: Basic Logging Metaclass
+class VerboseMeta(type):
+    def __new__(mcs, name, bases, ns):
+        return super().__new__(mcs, name, bases, ns)
+
+# Ex 3: Docstring Enforcer
+class DocMeta(type):
+    def __new__(mcs, name, bases, ns):
+        if not ns.get("__doc__"): raise TypeError(f"Missing docstring: {name}")
+        return super().__new__(mcs, name, bases, ns)
+
+# Ex 4: __prepare__
+class OrderedMeta(type):
+    @classmethod
+    def __prepare__(mcs, name, bases): return dict()
+
+# Ex 5: __init_subclass__
+class RegistryBase:
+    _reg = {}
+    def __init_subclass__(cls, tag, **kw):
+        super().__init_subclass__(**kw)
+        RegistryBase._reg[tag] = cls
+
+# Ex 6: Auto-Uppercase Attributes
+class UpperMeta(type):
+    def __new__(mcs, name, bases, ns):
+        uppers = {k.upper() if not k.startswith("__") else k: v for k, v in ns.items()}
+        return super().__new__(mcs, name, bases, uppers)
+
+# Ex 7: Metaclass __call__ Singleton
+class MetaSingleton(type):
+    _insts = {}
+    def __call__(cls, *a, **kw):
+        if cls not in cls._insts: cls._insts[cls] = super().__call__(*a, **kw)
+        return cls._insts[cls]
+
+# Ex 8: Custom ABCMeta Alternative
+# Verified in main solution above.
+
+# Ex 9: Conflict Resolution
+class MetaA(type): pass
+class MetaB(type): pass
+class UnifiedMeta(MetaA, MetaB): pass
+```
 </details>

@@ -92,27 +92,60 @@ print(f"Generator memory footprint: {sys.getsizeof(gen_data)} bytes!")
 
 ---
 
-## 4. Multi-Stage Streaming Pipelines
+---
 
-Generators can be chained like Unix pipes (`cat log | grep ERROR | awk ...`), passing data downstream item-by-item without intermediate list buffers:
+## 5. Under the Hood: Generator Frames & Two-Way Communication (`.send()`)
+
+Unlike standard functions that allocate and destroy a stack frame upon return, generator functions allocate a **`PyGenObject`** holding its own execution frame (`f_lasti` instruction pointer and local variable dict `f_locals`) on the heap:
+
+```
+Caller Thread ──next(gen) / gen.send(val)──► [ Generator Frame: Heap Allocated ]
+                                              - Instruction Pointer (f_lasti)
+                                              - Local State (a=10, b=20)
+Caller Thread ◄──────yield item──────────────
+```
+
+### ⚡ Bidirectional Communication with `.send()`
+You can push data *back* into a running generator using `gen.send(value)`:
 
 ```python
-raw_log_stream = [
-    "2026-08-19 INFO User logged in",
-    "2026-08-19 WARN Disk latency high",
-    "2026-08-19 ERROR Database replica failed",
-    "2026-08-19 ERROR Out of memory exception",
-]
+def cumulative_running_average():
+    """Coroutine accumulator receiving values dynamically."""
+    total, count = 0.0, 0
+    average = None
+    while True:
+        # yield returns current average and pauses; incoming send value resumes execution
+        val = yield average
+        if val is None:
+            break
+        total += val
+        count += 1
+        average = total / count
 
-# Stage 1: Filter error lines
-error_lines = (line for line in raw_log_stream if "ERROR" in line)
+# Usage:
+avg_gen = cumulative_running_average()
+next(avg_gen) # Prime the generator to the first yield (returns None)
 
-# Stage 2: Extract error message body
-error_messages = (line.split("ERROR ")[1] for line in error_lines)
+print(avg_gen.send(10.0)) # 10.0
+print(avg_gen.send(20.0)) # 15.0
+print(avg_gen.send(30.0)) # 20.0
+avg_gen.close()
+```
 
-# Stage 3: Consume lazily
-for msg in error_messages:
-    print(f"🚨 Alert Dispatched: {msg}")
+### 🔄 Sub-Generator Delegation with `yield from`
+Instead of manually looping over inner iterables, `yield from` delegates execution directly to a sub-generator or iterable:
+
+```python
+def flatten_nested_tree(nested_structure):
+    for item in nested_structure:
+        if isinstance(item, list):
+            # Recursively delegates to sub-generator:
+            yield from flatten_nested_tree(item)
+        else:
+            yield item
+
+sample_tree = [1, [2, [3, 4], 5], 6]
+print(list(flatten_nested_tree(sample_tree))) # [1, 2, 3, 4, 5, 6]
 ```
 
 ---
@@ -217,6 +250,58 @@ print("=" * 80)
 
 ---
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master the iterator protocol, generators, generator expressions, pipeline chaining, coroutines with `.send()`, and `yield from`:
+
+---
+
+### 🟢 Tier 1: Iterator Protocol & Basic Generators (Exercises 1–3)
+
+#### 🔹 Exercise 1: Countdown Iterator Class
+* **Goal**: Implement `class CountdownIterator` with `__iter__` and `__next__` stepping from `start` down to 0, raising `StopIteration`.
+
+#### 🔹 Exercise 2: Infinite Counter with Generator
+* **Goal**: Create generator `def infinite_sequence(start: int = 1)`. Use `itertools.islice` or a `for` loop with `break` to print the first 10 values.
+
+#### 🔹 Exercise 3: Memory-Efficient Squares Generator Expression
+* **Goal**: Create generator expression `(x**2 for x in range(1_000_000))`. Use `sum()` to calculate the total without allocating list memory.
+
+---
+
+### 🟡 Tier 2: Filtering & Chunking Generators (Exercises 4–6)
+
+#### 🔹 Exercise 4: Batch / Chunking Generator
+* **Goal**: Write generator `def chunk_stream(iterable, chunk_size: int)` that yields sub-lists of size `chunk_size`.
+
+#### 🔹 Exercise 5: Log File Error Grep Filter
+* **Goal**: Write generator `def grep_errors(lines)` yielding only lines containing `"CRITICAL"` or `"ERROR"`.
+
+#### 🔹 Exercise 6: Fibonacci Generator with State Caching
+* **Goal**: Implement `def fibonacci_gen(limit: int)` using `yield` and compare its execution performance vs recursive Fibonacci.
+
+---
+
+### 🟠 Tier 3: Coroutines & Tree Traversal (Exercises 7–9)
+
+#### 🔹 Exercise 7: Bidirectional Coroutine Accumulator (`.send()`)
+* **Goal**: Implement a coroutine `def running_sum()` that accepts numbers via `.send(val)` and yields the cumulative total.
+
+#### 🔹 Exercise 8: Recursive Tree Flattening with `yield from`
+* **Goal**: Write generator `def flatten(nested)` using `yield from` to traverse deeply nested lists and yield leaf elements.
+
+#### 🔹 Exercise 9: Multi-Stage Streaming ETL Pipeline
+* **Goal**: Build a 3-stage generator pipeline: `read_raw_csv_stream()` $\rightarrow$ `cleanse_and_validate()` $\rightarrow$ `aggregate_hourly_totals()`.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: E-Commerce Transaction Streaming & Fraud Filter Pipeline
+* **Goal**: Build an end-to-end real-time credit transaction generator pipeline with memory-efficient CSV streaming, heuristic risk filtering, and formatted fraud dispatch alerts.
+
+---
+
 ## 📝 Quick Exercise: E-Commerce Transaction Log Streaming & Fraud Filter Pipeline
 
 ### 🏢 Real-Life Scenario
@@ -249,10 +334,12 @@ Total Suspicious Transactions Detected: 2
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Fraud Streamer & 10 Challenges)</b></summary>
 
 ```python
-# 1. Pipeline Generator Stages (Level 2)
+# =====================================================================
+# SOLUTION: Fraud Streaming Pipeline
+# =====================================================================
 def stream_transactions(raw_csv_records: list[str]):
     for record in raw_csv_records:
         line = record.strip()
@@ -278,7 +365,6 @@ def generate_fraud_alerts(flagged_stream):
         yield f"🚨 [FLAGGED] Txn {txn['txn_id']} | User: {txn['user_id']} | ${txn['amount']:,.2f} | Country: {txn['country']} | Reason: {reason}"
 
 
-# 2. Execution Run
 raw_feed = [
     "TXN-101,USR-12,45.00,US,VISA",
     "TXN-102,USR-44,1250.00,GB,MASTERCARD",
@@ -287,7 +373,6 @@ raw_feed = [
     "TXN-105,USR-19,300.00,CA,VISA",
 ]
 
-# Connect generator pipeline
 parsed_stream = stream_transactions(raw_feed)
 filtered_stream = filter_suspicious_transactions(parsed_stream)
 alert_stream = generate_fraud_alerts(filtered_stream)
@@ -304,10 +389,66 @@ for alert in alert_stream:
 print("--------------------------------------------------")
 print(f"Total Suspicious Transactions Detected: {alert_count}")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `stream_transactions` parses raw text incrementally without pre-allocating dictionary arrays.
-- `filter_suspicious_transactions` filters records on-the-fly and yields suspicious records downstream.
-- `generate_fraud_alerts` decorates data for human console evaluation.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+class CountdownIterator:
+    def __init__(self, s: int): self.cur = s
+    def __iter__(self): return self
+    def __next__(self):
+        if self.cur < 0: raise StopIteration
+        val = self.cur; self.cur -= 1; return val
+
+# Ex 2:
+def infinite_sequence(start: int = 1):
+    n = start
+    while True: yield n; n += 1
+
+# Ex 3:
+sum_squares = sum(x**2 for x in range(1000))
+print(f"Sum of squares: {sum_squares}")
+
+# Ex 4:
+def chunk_stream(iterable, chunk_size: int):
+    chunk = []
+    for item in iterable:
+        chunk.append(item)
+        if len(chunk) == chunk_size:
+            yield chunk
+            chunk = []
+    if chunk: yield chunk
+
+# Ex 5:
+def grep_errors(lines):
+    for l in lines:
+        if "CRITICAL" in l or "ERROR" in l: yield l
+
+# Ex 6:
+def fibonacci_gen(limit: int):
+    a, b, count = 0, 1, 0
+    while count < limit:
+        yield a
+        a, b = b, a + b
+        count += 1
+
+# Ex 7:
+def running_sum():
+    tot = 0.0
+    while True:
+        v = yield tot
+        if v is None: break
+        tot += v
+
+# Ex 8:
+def flatten(nested):
+    for item in nested:
+        if isinstance(item, list): yield from flatten(item)
+        else: yield item
+
+# Ex 9:
+# Multi-stage generator pipeline demonstrated in Exercise 10 above.
+```
 </details>
+

@@ -70,30 +70,88 @@ def decode_access_token(token: str) -> dict:
 
 ---
 
-## 3. Role-Based Access Control (RBAC) with FastAPI Dependencies
+---
 
-```python
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+## 4. Symmetric (HS256) vs Asymmetric (RS256) Signing
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
+| Feature | HS256 (HMAC-SHA256) | RS256 (RSA Signature) |
+| :--- | :--- | :--- |
+| **Key Architecture** | Single Shared Secret Key | Private Key (sign) + Public Key (verify) |
+| **Best Used For** | Monolithic backends, single-service APIs | Distributed microservices, auth providers (Auth0, Okta, Keycloak) |
+| **Security Advantage** | Fast and simple | Microservices can verify tokens using the public key without knowing the signing private key! |
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
-    try:
-        payload = decode_access_token(token)
-        return {"user_id": payload["sub"], "role": payload["role"]}
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Access token has expired.")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token signature.")
+---
 
-def require_role(required_role: str):
-    def role_checker(user: dict = Depends(get_current_user)):
-        if user["role"] != required_role:
-            raise HTTPException(status_code=403, detail="Forbidden: Insufficient privileges.")
-        return user
-    return role_checker
-```
+## 5. Refresh Token Rotation & Token Revocation (JTI Blocklist)
+
+Stateless JWTs cannot be easily revoked before their expiration time. Enterprise architectures solve this using **Refresh Token Rotation**:
+1. **Access Token**: Short-lived (15 minutes). Sent in `Authorization: Bearer <token>`.
+2. **Refresh Token**: Long-lived (7 days). Stored in `HttpOnly, Secure` cookies.
+3. **Rotation**: When the refresh token is exchanged for a new access token, the old refresh token is invalidated immediately.
+4. **JTI (JWT ID) Blocklist**: Stolen tokens are blacklisted in Redis keyed by `jti` claim with an automated TTL equal to token expiration.
+
+---
+
+## 6. OAuth2 Authorization Code Flow with PKCE
+
+For Single Page Applications (React, Vue) and mobile clients, **PKCE (Proof Key for Code Exchange)** prevents authorization code interception attacks without requiring a client secret:
+1. Client generates random `code_verifier` and computes `code_challenge = SHA256(code_verifier)`.
+2. User authenticates via browser; auth server issues authorization code.
+3. Client exchanges code + original `code_verifier` for access token.
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master password hashing, JWT signing, OAuth2 flows, refresh rotation, and RBAC guards:
+
+---
+
+### 🟢 Tier 1: Password Hashing & Salt Basics (Exercises 1–3)
+
+#### 🔹 Exercise 1: Salted PBKDF2 Password Hasher
+* **Goal**: Write a secure password hasher generating random 16-byte salts and 100,000 SHA256 iterations.
+
+#### 🔹 Exercise 2: Password Verification Function
+* **Goal**: Validate candidate passwords against stored hex hashes in constant time to prevent timing attacks.
+
+#### 🔹 Exercise 3: Simple JWT Issuance & Decoding
+* **Goal**: Encode a JWT with `sub`, `iat`, and `exp` claims and decode it with `jwt.decode()`.
+
+---
+
+### 🟡 Tier 2: Expiration, Roles & OAuth2 Dependencies (Exercises 4–6)
+
+#### 🔹 Exercise 4: Token Expiration Error Handling
+* **Goal**: Catch `jwt.ExpiredSignatureError` and return structured HTTP 401 response payload.
+
+#### 🔹 Exercise 5: Role-Based Access Dependency (`require_roles`)
+* **Goal**: Build a FastAPI dependency factory restricting routes to users with `"ADMIN"` or `"MANAGER"` roles.
+
+#### 🔹 Exercise 6: OAuth2 Password Bearer Header Extractor
+* **Goal**: Use `OAuth2PasswordBearer(tokenUrl="...")` to extract bearer tokens from request headers.
+
+---
+
+### 🟠 Tier 3: Refresh Tokens & Asymmetric Verification (Exercises 7–9)
+
+#### 🔹 Exercise 7: Dual Token Pair Generation (Access + Refresh)
+* **Goal**: Issue short-lived access token (15m) and long-lived refresh token (7d) with distinct `type` claims.
+
+#### 🔹 Exercise 8: Refresh Token Rotation Engine
+* **Goal**: Implement token exchange consuming a refresh token and issuing a brand new token pair.
+
+#### 🔹 Exercise 9: Redis JTI Blacklist Simulation
+* **Goal**: Implement `revoke_token(jti)` storing invalidated token IDs in a set to block future requests.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Enterprise JWT Security Guard & RBAC Gateway
+* **Goal**: Build a production-grade authentication verification firewall validating signatures, expiration dates, and role permissions.
+
+---
 
 ---
 
@@ -271,15 +329,17 @@ You are developing the authentication firewall middleware for an enterprise clou
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (JWT Guard & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Enterprise JWT Security Guard & RBAC Gateway
+# =====================================================================
 import jwt
 from datetime import datetime, timedelta, timezone
 
 SECRET = "KEY_XYZ_SECURITY_2026"
 
-# 1. Token Issuer (Level 4)
 def issue_test_jwt(email: str, role: str, expires_in_seconds: int = 300) -> str:
     now = datetime.now(timezone.utc)
     payload = {
@@ -292,7 +352,6 @@ def issue_test_jwt(email: str, role: str, expires_in_seconds: int = 300) -> str:
     return jwt.encode(payload, SECRET, algorithm="HS256")
 
 
-# 2. JWT Verification Guard (Level 4)
 def verify_jwt_access_guard(token: str, required_roles: set[str]) -> tuple[bool, str, dict | None]:
     try:
         payload = jwt.decode(token, SECRET, algorithms=["HS256"])
@@ -305,31 +364,64 @@ def verify_jwt_access_guard(token: str, required_roles: set[str]) -> tuple[bool,
         return False, f"Invalid token: {err}", None
 
 
-# 3. Execution Simulation
 admin_token = issue_test_jwt("admin@corp.io", "ADMIN", expires_in_seconds=300)
-expired_token = issue_test_jwt("user@corp.io", "ADMIN", expires_in_seconds=-10) # Expired
+expired_token = issue_test_jwt("user@corp.io", "ADMIN", expires_in_seconds=-10)
 dev_token = issue_test_jwt("dev@corp.io", "DEVELOPER", expires_in_seconds=300)
 
 print("==================================================")
 print("        ENTERPRISE JWT SECURITY GUARD TEST        ")
 print("==================================================")
 
-# Test 1: Valid
 ok1, msg1, p1 = verify_jwt_access_guard(admin_token, {"ADMIN"})
 print(f"  ✓ Valid Admin Token:     {'✅' if ok1 else '🚨'} {msg1} (User: {p1['sub']})")
 
-# Test 2: Expired
 ok2, msg2, _ = verify_jwt_access_guard(expired_token, {"ADMIN"})
 print(f"  ✗ Expired User Token:    {'✅' if ok2 else '🚨'} {msg2}")
 
-# Test 3: Unauthorized Role
 ok3, msg3, _ = verify_jwt_access_guard(dev_token, {"ADMIN"})
 print(f"  ✗ Unauthorized Dev Token:{'✅' if ok3 else '🚨'} {msg3}")
 
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `verify_jwt_access_guard` leverages PyJWT to validate both cryptographic signature integrity and timestamp expiration bounds in a single step.
-- Role checks prevent non-administrative users from calling protected operations.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Salted PBKDF2 Hasher
+import hashlib, os
+def hash_pwd(pwd: str):
+    salt = os.urandom(16)
+    h = hashlib.pbkdf2_hmac("sha256", pwd.encode(), salt, 100_000)
+    return h.hex(), salt.hex()
+
+# Ex 2: Password Verifier
+import hmac
+def verify_pwd(pwd, stored_h, stored_salt):
+    salt = bytes.fromhex(stored_salt)
+    h = hashlib.pbkdf2_hmac("sha256", pwd.encode(), salt, 100_000).hex()
+    return hmac.compare_digest(h, stored_h)
+
+# Ex 3: Encode/Decode JWT
+# payload = {"sub": "123", "exp": datetime.now(timezone.utc) + timedelta(minutes=15)}
+# token = jwt.encode(payload, "secret", algorithm="HS256")
+
+# Ex 4: Handle Expiration
+# try: jwt.decode(t, "secret", algorithms=["HS256"]) except jwt.ExpiredSignatureError: ...
+
+# Ex 5: Role Requirement Dependency
+# def require_roles(*roles): def dep(u = Depends(get_current_user)): if u["role"] not in roles: raise HTTPException(403)
+
+# Ex 6: OAuth2PasswordBearer
+# oauth2 = OAuth2PasswordBearer(tokenUrl="token")
+
+# Ex 7: Dual Token Pair
+# access_token = jwt.encode({"sub": u, "type": "access", "exp": ...}, s)
+# refresh_token = jwt.encode({"sub": u, "type": "refresh", "exp": ...}, s)
+
+# Ex 8: Token Rotation
+# def rotate_tokens(old_refresh): revoke(old_refresh); return create_pair()
+
+# Ex 9: JTI Blacklist
+# REVOKED_JTIS = set()
+# def is_revoked(jti): return jti in REVOKED_JTIS
+```
 </details>

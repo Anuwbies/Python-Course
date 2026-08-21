@@ -83,7 +83,119 @@ cpdef double batch_compute_distances(double[:] xs, double[:] ys) nogil:
 
 ---
 
-## 💻 Code Example & Reference
+---
+
+## 4. CFFI (C Foreign Function Interface)
+
+**CFFI** parses actual C header syntax directly without manual ctypes mappings:
+
+```python
+from cffi import FFI
+ffi = FFI()
+
+# Declare C function signatures directly:
+ffi.cdef("""
+    int printf(const char *format, ...);
+    double sqrt(double x);
+""")
+
+C = ffi.dlopen(None) # Open standard C library
+result = C.sqrt(16.0)
+print("Computed via CFFI:", result) # 4.0
+```
+
+---
+
+## 5. Cython Typed Memoryviews (`double[:]`)
+
+In Cython, typed memoryviews provide direct C-speed access to NumPy arrays and Python buffers without Python object indexing overhead:
+
+```cython
+# cython_kernels.pyx
+cimport cython
+
+@cython.boundscheck(False) # Turn off index bounds checking for max speed
+@cython.wraparound(False)   # Turn off negative index handling
+cpdef void fast_matrix_multiply(double[:, :] A, double[:, :] B, double[:, :] C) nogil:
+    cdef int i, j, k, n = A.shape[0]
+    with nogil:
+        for i in range(n):
+            for j in range(n):
+                for k in range(n):
+                    C[i, j] += A[i, k] * B[k, j]
+```
+
+---
+
+## 6. Pure CPython C-API (`Python.h`)
+
+For absolute lowest overhead, native C extensions define functions adhering to the CPython C-API:
+
+```c
+#include <Python.h>
+
+static PyObject* method_add(PyObject* self, PyObject* args) {
+    long a, b;
+    if (!PyArg_ParseTuple(args, "ll", &a, &b)) {
+        return NULL;
+    }
+    return PyLong_FromLong(a + b);
+}
+```
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master `ctypes`, CFFI, Cython static compilation, GIL-release, and C-API extensions:
+
+---
+
+### 🟢 Tier 1: `ctypes` Primitives & C-Functions (Exercises 1–3)
+
+#### 🔹 Exercise 1: Calling Standard Libc via `ctypes`
+* **Goal**: Call `libc.puts` or `libc.abs` declaring `argtypes` and `restype`.
+
+#### 🔹 Exercise 2: `ctypes.Structure` Declaration
+* **Goal**: Define a C-struct with `_fields_ = [("x", ctypes.c_int), ("y", ctypes.c_int)]`.
+
+#### 🔹 Exercise 3: Passing Pointers via `ctypes.byref`
+* **Goal**: Pass a variable pointer to a function and mutate its value in C memory.
+
+---
+
+### 🟡 Tier 2: Arrays, CFFI & Buffer Pointers (Exercises 4–6)
+
+#### 🔹 Exercise 4: Contiguous C Array Allocation
+* **Goal**: Allocate a `ctypes.c_double * 10` array and compute Euclidean distance across elements.
+
+#### 🔹 Exercise 5: In-Line C Parsing with CFFI
+* **Goal**: Use `cffi.FFI()` to parse a C struct declaration and instantiate instances.
+
+#### 🔹 Exercise 6: String Pointer Safety (`ctypes.c_char_p`)
+* **Goal**: Pass a UTF-8 encoded Python bytes buffer safely to a native C string consumer.
+
+---
+
+### 🟠 Tier 3: Cython, Memoryviews & GIL Release (Exercises 7–9)
+
+#### 🔹 Exercise 7: Static Cython Typing (`cdef` / `cpdef`)
+* **Goal**: Write a `.pyx` function calculating Fibonacci numbers with 64-bit integer types (`cdef unsigned long long`).
+
+#### 🔹 Exercise 8: Cython Typed Memoryview Matrix Traversal
+* **Goal**: Process a 2D float memoryview `double[:, :]` without bounds checking.
+
+#### 🔹 Exercise 9: Multi-Threaded Parallelism with `with nogil:`
+* **Goal**: Release the GIL inside a Cython loop and parallelize array operations across threads with OpenMP (`prange`).
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Native C-Type Euclidean Trajectory Calculator
+* **Goal**: Build a native C-speed waypoint trajectory calculator allocating C-level coordinate arrays and computing path lengths.
+
+---
 
 The following real-life program models an **Enterprise High-Performance Native Memory Buffer & Checksum Engine**, demonstrating `ctypes` data structures, memory buffer pointer manipulation, and pure C-speed CRC32 computations:
 
@@ -202,19 +314,20 @@ Total Waypoint Trajectory Distance: 10.00 units
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Trajectory Calculator & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Native C-Type Distance Calculator
+# =====================================================================
 import ctypes
 import math
 
-# 1. Native Array Distance Calculator (Level 5)
 def calculate_path_distance_ctypes(x_coords: list[float], y_coords: list[float]) -> float:
     n = len(x_coords)
     if n != len(y_coords) or n < 2:
         return 0.0
 
-    # Allocate contiguous C-level arrays
     C_ArrayType = ctypes.c_double * n
     c_xs = C_ArrayType(*x_coords)
     c_ys = C_ArrayType(*y_coords)
@@ -228,7 +341,6 @@ def calculate_path_distance_ctypes(x_coords: list[float], y_coords: list[float])
     return round(total_distance, 2)
 
 
-# 2. Execution Simulation
 xs = [0.0, 3.0, 6.0]
 ys = [0.0, 4.0, 8.0]
 
@@ -243,8 +355,43 @@ for idx, (x, y) in enumerate(zip(xs, ys)):
 print("--------------------------------------------------")
 print(f"Total Waypoint Trajectory Distance: {dist:.2f} units")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `ctypes.c_double * n` allocates contiguous native C double-precision floating point arrays, demonstrating how data is structured for fast C extensions.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Call Libc
+import os
+# if os.name == "nt": libc = ctypes.cdll.msvcrt
+# else: libc = ctypes.CDLL("libc.so.6")
+# libc.abs.argtypes = [ctypes.c_int]; libc.abs.restype = ctypes.c_int
+
+# Ex 2: ctypes.Structure
+class Point2D(ctypes.Structure):
+    _fields_ = [("x", ctypes.c_int), ("y", ctypes.c_int)]
+
+# Ex 3: byref mutation
+val = ctypes.c_int(10)
+# fn(ctypes.byref(val))
+
+# Ex 4: C array
+arr = (ctypes.c_double * 5)(1.0, 2.0, 3.0, 4.0, 5.0)
+
+# Ex 5: CFFI
+from cffi import FFI
+ffi = FFI()
+ffi.cdef("struct Color { int r, g, b; };")
+
+# Ex 6: c_char_p safety
+msg = b"Safe C Buffer"
+c_str = ctypes.c_char_p(msg)
+
+# Ex 7: Cython static def
+# cpdef unsigned long long fib(int n): ...
+
+# Ex 8: Memoryview boundscheck
+# @cython.boundscheck(False) cpdef void run(double[:] v): ...
+
+# Ex 9: with nogil
+# with nogil: for i in prange(n): ...
+```
 </details>

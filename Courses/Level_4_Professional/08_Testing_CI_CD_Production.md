@@ -44,20 +44,104 @@ async def test_create_user_endpoint(async_client: AsyncClient):
 
 ---
 
-## 2. Fast Linting & Formatting with Ruff
+---
 
-**Ruff** is an ultra-fast Python linter and formatter written in Rust that replaces Flake8, Black, isort, and Bandit:
+## 4. Sub-Second Test Database Isolation: Transactional Rollback Fixtures
 
-```toml
-# pyproject.toml
-[tool.ruff]
-line-length = 100
-target-version = "py312"
+Creating and dropping database tables for every test is prohibitively slow. Instead, modern production test suites start a database transaction before each test, run the test, and execute a **Rollback** on teardown so no state is ever permanently committed:
 
-[tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "S"]
-ignore = ["S101"] # Allow assert in tests
+```python
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+
+@pytest.fixture
+async def db_session(async_engine):
+    """Wraps each test in an isolated rollback transaction."""
+    async with async_engine.connect() as conn:
+        trans = await conn.begin()
+        session = AsyncSession(bind=conn, expire_on_commit=False)
+        yield session
+        await session.close()
+        await trans.rollback() # Instant cleanup: 0 disk I/O!
 ```
+
+---
+
+## 5. Matrix Builds in GitHub Actions (`strategy.matrix`)
+
+```yaml
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+```
+
+---
+
+## 6. Blue-Green vs Canary Deployment Strategies
+
+- **Blue-Green Deployment**: Two identical environments (Blue = Live, Green = Idle). Deploy new version to Green, run smoke tests, then switch router traffic from Blue to Green instantly.
+- **Canary Deployment**: Route 5% of live traffic to the new version. Monitor error rates in Prometheus/Datadog for 15 minutes; automatically promote to 100% or roll back.
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master pytest-asyncio, HTTPX testing, transactional rollback fixtures, CI/CD matrices, and zero-downtime deployments:
+
+---
+
+### 🟢 Tier 1: Unit & Async Test Basics (Exercises 1–3)
+
+#### 🔹 Exercise 1: Basic Async Test with `pytest.mark.asyncio`
+* **Goal**: Write an async test function verifying a coroutine return value.
+
+#### 🔹 Exercise 2: HTTPX Mock Client Setup
+* **Goal**: Mount a FastAPI app to `httpx.AsyncClient(transport=ASGITransport(app=app))` and test `GET /health`.
+
+#### 🔹 Exercise 3: Pytest Parametrized Tests (`@pytest.mark.parametrize`)
+* **Goal**: Test tax calculations across 5 different income bracket inputs.
+
+---
+
+### 🟡 Tier 2: Fixtures, Mocking & Status Codes (Exercises 4–6)
+
+#### 🔹 Exercise 4: Autouse Fixture for Environment Variables
+* **Goal**: Set `monkeypatch.setenv("ENV", "TESTING")` across all tests automatically.
+
+#### 🔹 Exercise 5: Mocking External HTTP API Calls (`respx` / `unittest.mock`)
+* **Goal**: Mock an outbound Stripe payment endpoint returning 200 OK without hitting external networks.
+
+#### 🔹 Exercise 6: Testing 422 Unprocessable Entity Validation
+* **Goal**: Send an invalid JSON body (e.g. `age: -5`) and assert `response.status_code == 422`.
+
+---
+
+### 🟠 Tier 3: Database Isolation & CI/CD Pipelines (Exercises 7–9)
+
+#### 🔹 Exercise 7: Transactional Rollback Test Fixture
+* **Goal**: Write a fixture that rolls back SQL inserts after each test to maintain clean tables.
+
+#### 🔹 Exercise 8: GitHub Actions Workflow with Service Containers
+* **Goal**: Author `.github/workflows/ci.yml` running Postgres and Redis service containers.
+
+#### 🔹 Exercise 9: Code Coverage Gate (`pytest-cov`)
+* **Goal**: Configure CI to fail if test code coverage drops below 90% (`--cov-fail-under=90`).
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: E-Commerce Checkout API Async Integration Test Suite
+* **Goal**: Build an end-to-end asynchronous test suite verifying status codes, schema validation, and order state persistence.
+
+---
 
 ---
 
@@ -280,12 +364,14 @@ ALL 3 INTEGRATION TESTS PASSED (100% GREEN) ✅
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Order API Test & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Order API Integration Test Suite
+# =====================================================================
 import asyncio
 
-# 1. Mock Order Router (Level 4)
 class MockOrderAPI:
     def __init__(self):
         self.orders = {}
@@ -310,19 +396,15 @@ class MockOrderAPI:
         return 404, {"error": "Not found"}
 
 
-# 2. Test Suite
 async def run_order_test_suite():
     api = MockOrderAPI()
 
-    # Test 1: 404 check
     c1, _ = await api.handle_request("GET", "/orders/ORD-NONEXISTENT")
     assert c1 == 404
 
-    # Test 2: 422 validation check
     c2, _ = await api.handle_request("POST", "/orders", {"customer_id": "CUST-01", "items": []})
     assert c2 == 422
 
-    # Test 3: 201 success check
     c3, b3 = await api.handle_request("POST", "/orders", {"customer_id": "CUST-01", "items": ["Item A"]})
     assert c3 == 201
     assert b3["order_id"] == "ORD-99"
@@ -339,9 +421,35 @@ async def run_order_test_suite():
 
 if __name__ == "__main__":
     asyncio.run(run_order_test_suite())
-```
 
-**Explanation of the Solution:**
-- `MockOrderAPI` accurately reproduces HTTP status code responses (`404`, `422`, `201`).
-- Async assertions verify request-response correctness without external network dependencies.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: pytest.mark.asyncio
+# @pytest.mark.asyncio async def test_sample(): res = await fetch_data(); assert res == 100
+
+# Ex 2: HTTPX client
+# async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac: ...
+
+# Ex 3: Parametrize
+# @pytest.mark.parametrize("inc,expected", [(10, 1), (50, 5), (100, 10)])
+
+# Ex 4: Monkeypatch env
+# @pytest.fixture(autouse=True) def set_env(monkeypatch): monkeypatch.setenv("ENV", "TEST")
+
+# Ex 5: Mock outbound API
+# with mock.patch("httpx.AsyncClient.post", return_value=Response(200)): ...
+
+# Ex 6: Status 422 assertion
+# res = await client.post("/items", json={"invalid": True}); assert res.status_code == 422
+
+# Ex 7: Transaction Rollback Fixture
+# @pytest.fixture async def db(engine): conn = await engine.connect(); t = await conn.begin(); yield; await t.rollback()
+
+# Ex 8: Matrix CI Workflow
+# strategy: matrix: python-version: ["3.11", "3.12"]
+
+# Ex 9: Coverage threshold
+# pytest --cov=app --cov-fail-under=90
+```
 </details>

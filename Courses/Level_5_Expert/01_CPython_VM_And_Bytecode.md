@@ -71,9 +71,89 @@ print("Raw Bytecode Bytes:", list(code_obj.co_code[:8])) # [151, 0, 124, 0, 100,
 
 ---
 
-## 4. Modern CPython Optimizations: Quickening & Inline Caching
+---
 
-Starting in Python 3.11 (Faster CPython initiative), the interpreter observes opcodes during execution. If an operation is consistently performed on the same data types (e.g. adding two floats), CPython dynamically rewrites (`super-specializes`) the opcode in-place in memory (e.g. `BINARY_OP` becomes `BINARY_OP_ADD_FLOAT`), bypassing generic type dispatch overhead.
+## 4. `PyFrameObject` & Stack Execution Internals
+
+When a Python function is invoked, CPython creates a `PyFrameObject` on the C stack/heap:
+- `f_localsplus`: A contiguous C array storing both fast local variables and the evaluation stack values in cache-line friendly memory.
+- `f_valuestack`: Pointer to top of evaluation stack.
+- `f_code`: Reference to the immutable `PyCodeObject`.
+
+### Why `LOAD_FAST` is $3\times$ Faster than `LOAD_GLOBAL`
+- **`LOAD_FAST (index)`**: Direct C array index offset access `f_localsplus[index]` (1 CPU cycle).
+- **`LOAD_GLOBAL (name)`**: Hash table lookup in the module `__dict__` and built-in `__dict__` (fallback if not cached).
+
+```python
+import types
+
+# Dynamic Code Compilation
+raw_code = compile("x * 2 + 1", filename="<dynamic>", mode="eval")
+print("Compiled opcodes:", [inst.opname for inst in dis.get_instructions(raw_code)])
+```
+
+---
+
+## 5. Python 3.11+ Specialized Adaptive Interpreter & 3.13 JIT
+
+- **PEP 659 Quickening**: The interpreter replaces generic opcodes with specialized inline versions during runtime profiling:
+  - `BINARY_OP` $\to$ `BINARY_OP_ADD_FLOAT` or `BINARY_OP_ADD_INT`.
+  - `LOAD_ATTR` $\to$ `LOAD_ATTR_MODULE` or `LOAD_ATTR_INSTANCE_VALUE`.
+- **Python 3.13 Copy-and-Patch JIT**: Compiles hot bytecode traces directly into native machine code (x86-64 / ARM64 assembly) at runtime without heavy LLVM compile times.
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master CPython VM internals, bytecode analysis, opcode transformations, and evaluation frames:
+
+---
+
+### 🟢 Tier 1: Bytecode Inspection & `dis` Basics (Exercises 1–3)
+
+#### 🔹 Exercise 1: Function Disassembly Explorer
+* **Goal**: Disassemble a basic function using `dis.dis()` and print the opcodes list.
+
+#### 🔹 Exercise 2: Code Object Attribute Inspection
+* **Goal**: Extract `co_varnames`, `co_consts`, and `co_stacksize` from a function.
+
+#### 🔹 Exercise 3: Counting Bytecode Instructions
+* **Goal**: Write a function counting total opcodes executed in a given callable using `dis.get_instructions()`.
+
+---
+
+### 🟡 Tier 2: Opcode Tallying & Static Analysis (Exercises 4–6)
+
+#### 🔹 Exercise 4: Local vs Global Variable Audit
+* **Goal**: Measure the ratio of `LOAD_FAST` to `LOAD_GLOBAL` instructions in a function.
+
+#### 🔹 Exercise 5: Detecting Constant Folding
+* **Goal**: Demonstrate how CPython folds `24 * 60 * 60` into a single `86400` constant at compile time.
+
+#### 🔹 Exercise 6: Forbidden Opcode Sandbox Linter
+* **Goal**: Write a linter that rejects any code containing `IMPORT_NAME` or `EXEC_STMT`.
+
+---
+
+### 🟠 Tier 3: Code Objects & Dynamic Execution (Exercises 7–9)
+
+#### 🔹 Exercise 7: Dynamic Bytecode Compilation with `compile()`
+* **Goal**: Compile an AST expression string into bytecode mode `"eval"` and execute it via `eval()`.
+
+#### 🔹 Exercise 8: Constructing Custom `CodeType` Objects
+* **Goal**: Inspect arguments needed to instantiate `types.CodeType` in modern Python.
+
+#### 🔹 Exercise 9: Branching Jump Analysis (`JUMP_FORWARD` / `POP_JUMP_IF_FALSE`)
+* **Goal**: Trace conditional branches and target jump offsets in an `if/else` bytecode stream.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Bytecode Security & Execution Efficiency Profiler
+* **Goal**: Build an automated bytecode auditor evaluating local vs global lookup efficiencies and flagging security violations.
+
+---
 
 ---
 
@@ -207,12 +287,14 @@ Function: unoptimized_global_function
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Bytecode Profiler & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: CPython Bytecode Efficiency Profiler
+# =====================================================================
 import dis
 
-# 1. Bytecode Profiler (Level 5)
 def profile_bytecode_efficiency(target_fn) -> dict:
     stats = {
         "local_lookups": 0,
@@ -237,7 +319,6 @@ def profile_bytecode_efficiency(target_fn) -> dict:
     return stats
 
 
-# 2. Test Functions
 GLOBAL_RATE = 0.08
 GLOBAL_TAX = 5.0
 
@@ -250,7 +331,6 @@ def unoptimized_global_function(price: float) -> float:
     return (price * GLOBAL_RATE) + GLOBAL_TAX
 
 
-# 3. Execution Run
 print("==================================================")
 print("        CPYTHON BYTECODE EFFICIENCY PROFILER      ")
 print("==================================================")
@@ -265,9 +345,45 @@ for fn in (optimized_local_function, unoptimized_global_function):
     print("--------------------------------------------------")
 
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `profile_bytecode_efficiency` inspects the opcode stream via `dis.get_instructions()`.
-- Highlights how storing variables locally utilizes CPython's fast array-indexed `LOAD_FAST` instruction instead of dictionary-hashed `LOAD_GLOBAL`.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Disassemble Function
+def sample_add(a, b): return a + b
+# dis.dis(sample_add)
+
+# Ex 2: Code Object Attributes
+def inspect_code(fn):
+    c = fn.__code__
+    return {"varnames": c.co_varnames, "consts": c.co_consts, "stack": c.co_stacksize}
+
+# Ex 3: Instruction Counter
+def count_instructions(fn):
+    return len(list(dis.get_instructions(fn)))
+
+# Ex 4: Local vs Global
+# Tested in main exercise solution above.
+
+# Ex 5: Constant Folding
+def calc_seconds(): return 60 * 60 * 24
+# dis.dis(calc_seconds) -> LOAD_CONST 86400 (pre-folded)
+
+# Ex 6: Sandbox Linter
+def lint_sandbox(fn):
+    return not any(i.opname in {"IMPORT_NAME", "IMPORT_FROM"} for i in dis.get_instructions(fn))
+
+# Ex 7: Dynamic compile
+compiled = compile("x * 2 + 1", "<string>", "eval")
+# eval(compiled, {"x": 5}) -> 11
+
+# Ex 8: CodeType Construction
+# types.CodeType(0, 0, 0, 0, 1, 67, b'...', (None,), (), (), '<str>', 'fn', 1, b'')
+
+# Ex 9: Branch Jump Analysis
+def branch_fn(x):
+    if x > 0: return 1
+    return 0
+# [i.argval for i in dis.get_instructions(branch_fn) if 'JUMP' in i.opname]
+```
 </details>

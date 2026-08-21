@@ -66,25 +66,90 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 ---
 
-## 2. The `.dockerignore` File
+---
 
-```gitignore
-.git
-.gitignore
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.pytest_cache/
-.coverage
-htmlcov/
-.env
-.venv/
-env/
-venv/
-*.sqlite3
-*.db
+## 4. Docker Layer Caching & Build Optimization
+
+Docker builds images as a stack of read-only layers. If a layer hasn't changed, Docker reuses the cached layer:
+- ❌ **Anti-Pattern**: `COPY . .` followed by `RUN pip install -r requirements.txt` (any source code change invalidates the pip install cache, causing slow 5-minute rebuilds).
+- ✅ **Optimized Order**:
+  1. `COPY requirements.txt .`
+  2. `RUN pip install -r requirements.txt` (Cached as long as requirements don't change!)
+  3. `COPY ./app /app` (Only fast app layer rebuilds on code edits).
+
+---
+
+## 5. Under the Hood: Linux Cgroups & Namespaces
+
+Containers are not lightweight virtual machines; they are standard OS processes isolated by kernel features:
+- **Namespaces**: Provide process isolation (`PID` namespace hides other processes; `NET` namespace gives isolated virtual network interfaces; `MNT` isolates the filesystem).
+- **Cgroups (Control Groups)**: Enforce hardware resource limits (e.g. `deploy.resources.limits.cpus: "2.0"` and `memory: "1GB"`).
+
+---
+
+## 6. The PID 1 Zombie Reaping Problem & `tini`
+
+When a Python script runs as `PID 1` in a container, it does not inherit default OS init system behavior—it fails to reap orphaned child processes (creating zombie processes) and may ignore `SIGTERM` shutdown signals from Docker/Kubernetes. Use an init helper like **`tini`** or `dumb-init`:
+
+```dockerfile
+RUN apt-get update && apt-get install -y tini
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["python", "main.py"]
 ```
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master Dockerfiles, caching, multi-stage builds, compose orchestration, and container security:
+
+---
+
+### 🟢 Tier 1: Basic Dockerfile & Build Context (Exercises 1–3)
+
+#### 🔹 Exercise 1: Single-Stage Python Dockerfile
+* **Goal**: Write a `Dockerfile` for a Flask/FastAPI app setting `WORKDIR /app` and `EXPOSE 8000`.
+
+#### 🔹 Exercise 2: Comprehensive `.dockerignore`
+* **Goal**: Author `.dockerignore` excluding `.git`, `.venv`, `__pycache__`, and `.env`.
+
+#### 🔹 Exercise 3: Docker Layer Cache Verification
+* **Goal**: Structure a `Dockerfile` separating dependency installation from application source copying.
+
+---
+
+### 🟡 Tier 2: Multi-Stage Builds & Security (Exercises 4–6)
+
+#### 🔹 Exercise 4: Multi-Stage C-Extension Build
+* **Goal**: Compile C dependencies (`gcc`, `libpq-dev`) in a builder stage and copy clean wheels to runtime.
+
+#### 🔹 Exercise 5: Non-Root System User (`USER appuser`)
+* **Goal**: Create an unprivileged user/group (`appuser:1001`) and run the container securely.
+
+#### 🔹 Exercise 6: Container `HEALTHCHECK` Instruction
+* **Goal**: Add a `HEALTHCHECK --interval=10s` querying `/health` endpoint.
+
+---
+
+### 🟠 Tier 3: Docker Compose & Orchestration (Exercises 7–9)
+
+#### 🔹 Exercise 7: Multi-Service Compose Setup
+* **Goal**: Write `docker-compose.yml` linking a web app and Redis with shared bridge networks.
+
+#### 🔹 Exercise 8: Service Startup Dependency Ordering
+* **Goal**: Use `depends_on` with `condition: service_healthy` to ensure DB is healthy before app starts.
+
+#### 🔹 Exercise 9: Persistent Volume Configuration
+* **Goal**: Configure named volumes for PostgreSQL data persistence across container restarts.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Dockerfile Security Compliance Linter
+* **Goal**: Build an automated static analyzer auditing Dockerfile syntax for multi-stage usage, non-root users, and healthchecks.
+
+---
 
 ---
 
@@ -293,10 +358,12 @@ Target: Insecure Legacy Single-Stage Dockerfile
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Docker Linter & 10 Challenges)</b></summary>
 
 ```python
-# 1. Dockerfile Security Auditor (Level 4)
+# =====================================================================
+# SOLUTION: Dockerfile Security Compliance Linter
+# =====================================================================
 def audit_dockerfile_security(dockerfile_content: str) -> dict:
     lines = [line.strip() for line in dockerfile_content.splitlines() if line.strip() and not line.startswith("#")]
     
@@ -318,7 +385,6 @@ def audit_dockerfile_security(dockerfile_content: str) -> dict:
     }
 
 
-# 2. Test Dockerfile Samples
 prod_dockerfile = """
 FROM python:3.12-slim AS builder
 WORKDIR /build
@@ -355,8 +421,35 @@ for label, content in [("Production Multi-Stage Dockerfile", prod_dockerfile), (
     print(f"  - Compliance Score:  {res['score']:.1f}% {verdict}")
     print("--------------------------------------------------")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `audit_dockerfile_security` programmatically validates key enterprise container compliance guidelines before images can be deployed.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Basic Dockerfile
+# FROM python:3.12-slim; WORKDIR /app; COPY . .; CMD ["python", "main.py"]
+
+# Ex 2: .dockerignore
+# .git\n.venv\n__pycache__\n.env
+
+# Ex 3: Cache Separation
+# COPY req.txt .; RUN pip install -r req.txt; COPY src/ /app/
+
+# Ex 4: Multi-Stage C-Ext
+# FROM python:3.12 AS builder; RUN pip install psycopg2 ... FROM python:3.12-slim AS runtime
+
+# Ex 5: Non-Root User
+# RUN useradd -u 8888 appuser; USER appuser
+
+# Ex 6: Healthcheck
+# HEALTHCHECK --interval=30s CMD curl -f http://localhost:8000/health || exit 1
+
+# Ex 7: Docker Compose Services
+# services: web: { build: . }, redis: { image: redis:alpine }
+
+# Ex 8: depends_on condition
+# depends_on: db: { condition: service_healthy }
+
+# Ex 9: Volumes
+# volumes: pg_data: {}
+```
 </details>

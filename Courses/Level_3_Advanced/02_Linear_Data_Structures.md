@@ -94,22 +94,113 @@ class Stack:
 
 ---
 
-## 3. Queues (First-In, First-Out: FIFO) & `collections.deque`
+---
 
-In a **Queue**, items enter at the back (enqueue) and exit from the front (dequeue).
+## 4. Doubly Linked Lists & Sentinel Nodes
 
-> [!WARNING]
-> Never use a Python `list` as a Queue with `list.pop(0)`. Each `pop(0)` takes $\mathcal{O}(n)$ time. Always use `collections.deque` which provides guaranteed $\mathcal{O}(1)$ push and pop operations from both ends!
+In a **Doubly Linked List**, each node points to both its `next` and `prev` neighbors. To eliminate tedious `if head is None` boundary checks, modern systems utilize **Sentinel (Dummy) Nodes**:
+
+```
+[ Dummy Head ] <════> [ Node A ] <════> [ Node B ] <════> [ Dummy Tail ]
+```
 
 ```python
-from collections import deque
+class DNode:
+    def __init__(self, key: int = 0, val: int = 0):
+        self.key, self.val = key, val
+        self.prev = None
+        self.next = None
 
-# Fast O(1) Queue:
-task_queue = deque()
-task_queue.append("TASK-01")       # Enqueue
-task_queue.append("TASK-02")
-processed = task_queue.popleft()   # Dequeue in O(1) -> "TASK-01"
+class DoublyLinkedList:
+    def __init__(self):
+        self.head = DNode() # Sentinel Head
+        self.tail = DNode() # Sentinel Tail
+        self.head.next = self.tail
+        self.tail.prev = self.head
+
+    def add_first(self, node: DNode) -> None:
+        """Insert right after dummy head in O(1)."""
+        node.next = self.head.next
+        node.prev = self.head
+        self.head.next.prev = node
+        self.head.next = node
+
+    def remove(self, node: DNode) -> None:
+        """Delete arbitrary node in O(1) without list traversal."""
+        node.prev.next = node.next
+        node.next.prev = node.prev
 ```
+
+---
+
+## 5. Ring Buffer / Circular Queue
+
+A **Circular Buffer** utilizes a fixed-size contiguous array with `head` and `tail` pointers wrapping around using modulo arithmetic: `(tail + 1) % capacity`. It enables high-speed zero-allocation streaming across audio drivers and lock-free concurrency queues.
+
+---
+
+## 6. Memory & CPU Cache Locality: Arrays vs Linked Lists
+
+| Dimension | Dynamic Array (`list`) | Linked List (`Node`) |
+| :--- | :--- | :--- |
+| **Memory Layout** | Contiguous chunk in RAM | Scattered heap allocations |
+| **CPU Cache Hits** | **High** (hardware prefetching loads adjacent items) | **Low** (pointer chasing causes cache misses) |
+| **Memory Overhead** | Low (only pointer array + over-allocation) | High (every node stores `data`, `prev`, `next` pointers) |
+| **Prepend / Pop(0)** | $\mathcal{O}(n)$ expensive | $\mathcal{O}(1)$ immediate pointer redirect |
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master linked data structures, stacks, queues, and pointer mechanics:
+
+---
+
+### 🟢 Tier 1: Singly Linked Basics & Basic Stacks (Exercises 1–3)
+
+#### 🔹 Exercise 1: Singly Linked List Search
+* **Goal**: Write `.contains(target)` returning `True` if target exists in the singly linked list.
+
+#### 🔹 Exercise 2: Stack-Based String Reverser
+* **Goal**: Write `reverse_string_with_stack(text: str) -> str` using only `push` and `pop`.
+
+#### 🔹 Exercise 3: Queue-Based Ticket Counter Simulator
+* **Goal**: Model customer arrivals and departures using `collections.deque`.
+
+---
+
+### 🟡 Tier 2: Pointer Reversals & Cycle Detection (Exercises 4–6)
+
+#### 🔹 Exercise 4: In-Place Singly Linked List Reversal
+* **Goal**: Reverse a singly linked list in-place in $\mathcal{O}(n)$ time and $\mathcal{O}(1)$ auxiliary space by redirecting `.next` pointers.
+
+#### 🔹 Exercise 5: Floyd's Cycle Detection (Tortoise and Hare)
+* **Goal**: Implement `has_cycle(head: Node) -> bool` using slow and fast pointers.
+
+#### 🔹 Exercise 6: Find Middle Node in a Single Pass
+* **Goal**: Use fast/slow pointers to find the middle node of a linked list without computing its length first.
+
+---
+
+### 🟠 Tier 3: Advanced Linear Structures & Monotonic Stacks (Exercises 7–9)
+
+#### 🔹 Exercise 7: Monotonic Decreasing Stack (Next Greater Element)
+* **Goal**: Given an array of numbers, return the next greater element for each index in $\mathcal{O}(n)$ time using a monotonic stack.
+
+#### 🔹 Exercise 8: Minimum Stack with $\mathcal{O}(1)$ `get_min()`
+* **Goal**: Implement `MinStack` supporting `push`, `pop`, `top`, and `get_min()` all in $\mathcal{O}(1)$ time.
+
+#### 🔹 Exercise 9: LRU (Least Recently Used) Cache
+* **Goal**: Implement an `LRUCache(capacity)` combining a Hash Map (`dict`) with a Doubly Linked List for $\mathcal{O}(1)$ get and put.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Compiler Syntax Bracket & Nested Expression Validator
+* **Goal**: Build a production-grade compiler linting stack validator checking matching brackets, braces, and tags across source code.
+
+---
 
 ---
 
@@ -261,10 +352,12 @@ You are developing a compiler linting tool and code formatting validator (such a
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Bracket Validator & 10 Challenges)</b></summary>
 
 ```python
-# 1. Stack-Based Bracket Validator (Level 3)
+# =====================================================================
+# SOLUTION: Compiler Syntax Bracket Validator
+# =====================================================================
 def is_bracket_syntax_balanced(code_snippet: str) -> tuple[bool, str]:
     matching_pairs = {')': '(', '}': '{', ']': '['}
     opening = {'(', '{', '['}
@@ -272,7 +365,7 @@ def is_bracket_syntax_balanced(code_snippet: str) -> tuple[bool, str]:
 
     for char in code_snippet:
         if char in opening:
-            stack.append(char) # Push to stack (LIFO)
+            stack.append(char)
         elif char in matching_pairs:
             if not stack:
                 return False, f"Unmatched closing bracket '{char}' without opening symbol"
@@ -286,7 +379,6 @@ def is_bracket_syntax_balanced(code_snippet: str) -> tuple[bool, str]:
     return True, "Syntax brackets perfectly balanced"
 
 
-# 2. Test Execution
 test_snippets = [
     "def calculate(a, b): return [(a + b) * {2: True}[2]]",
     "if (user.is_active: return {data: [1, 2, 3]}",
@@ -303,9 +395,130 @@ for code in test_snippets:
     print(f"  {tag} {code} -> {msg}")
 
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- A LIFO Stack stores opening symbols as they are encountered.
-- When a closing bracket appears, popping the stack verifies that innermost nested expressions resolve first before outer blocks.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Singly Linked List Search
+class Node:
+    def __init__(self, data, nxt=None): self.data, self.next = data, nxt
+
+def search_linked_list(head: Node, target) -> bool:
+    curr = head
+    while curr:
+        if curr.data == target: return True
+        curr = curr.next
+    return False
+
+# Ex 2: Stack-Based String Reversal
+def reverse_string_with_stack(text: str) -> str:
+    stack = list(text)
+    return "".join(stack.pop() for _ in range(len(stack)))
+
+# Ex 3: Queue-Based Ticket Simulator
+from collections import deque
+def simulate_ticket_queue(customers):
+    q = deque(customers)
+    served = []
+    while q:
+        served.append(q.popleft())
+    return served
+
+# Ex 4: In-Place Singly Linked List Reversal O(n) Time, O(1) Space
+def reverse_list(head: Node) -> Node | None:
+    prev = None
+    curr = head
+    while curr:
+        nxt = curr.next
+        curr.next = prev
+        prev = curr
+        curr = nxt
+    return prev
+
+# Ex 5: Floyd's Cycle Detection (Tortoise and Hare)
+def has_cycle(head: Node) -> bool:
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+        if slow == fast: return True
+    return False
+
+# Ex 6: Single-Pass Middle Node
+def find_middle_node(head: Node) -> Node | None:
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+    return slow
+
+# Ex 7: Monotonic Decreasing Stack (Next Greater Element)
+def next_greater_element(nums: list[int]) -> list[int]:
+    res = [-1] * len(nums)
+    stack = [] # stores indices
+    for i, num in enumerate(nums):
+        while stack and nums[stack[-1]] < num:
+            idx = stack.pop()
+            res[idx] = num
+        stack.append(i)
+    return res
+
+# Ex 8: MinStack with O(1) get_min()
+class MinStack:
+    def __init__(self):
+        self.stack = []
+        self.min_stack = []
+
+    def push(self, val: int) -> None:
+        self.stack.append(val)
+        min_val = min(val, self.min_stack[-1] if self.min_stack else val)
+        self.min_stack.append(min_val)
+
+    def pop(self) -> int:
+        self.min_stack.pop()
+        return self.stack.pop()
+
+    def get_min(self) -> int:
+        return self.min_stack[-1]
+
+# Ex 9: LRU Cache (Hash Map + Doubly Linked List)
+class DNode:
+    def __init__(self, k=0, v=0): self.k, self.v, self.prev, self.next = k, v, None, None
+
+class LRUCache:
+    def __init__(self, capacity: int):
+        self.cap = capacity
+        self.cache = {}
+        self.head, self.tail = DNode(), DNode()
+        self.head.next, self.tail.prev = self.tail, self.head
+
+    def _remove(self, node: DNode):
+        node.prev.next = node.next
+        node.next.prev = node.prev
+
+    def _insert(self, node: DNode):
+        node.next = self.head.next
+        node.prev = self.head
+        self.head.next.prev = node
+        self.head.next = node
+
+    def get(self, key: int) -> int:
+        if key in self.cache:
+            node = self.cache[key]
+            self._remove(node)
+            self._insert(node)
+            return node.v
+        return -1
+
+    def put(self, key: int, value: int) -> None:
+        if key in self.cache:
+            self._remove(self.cache[key])
+        node = DNode(key, value)
+        self._insert(node)
+        self.cache[key] = node
+        if len(self.cache) > self.cap:
+            lru = self.tail.prev
+            self._remove(lru)
+            del self.cache[lru.k]
+```
 </details>

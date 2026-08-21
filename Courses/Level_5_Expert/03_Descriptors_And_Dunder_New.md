@@ -63,17 +63,101 @@ class ValidatedPositiveNumber:
 
 ---
 
-## 3. Attribute Lookup Precedence Order
+---
 
-When you evaluate `obj.attr`, CPython follows a strict 5-tier lookup hierarchy:
+## 4. How Python Methods Bind (`function.__get__`)
 
-$$\text{Data Descriptor} \longrightarrow \text{Instance } \texttt{\_\_dict\_\_} \longrightarrow \text{Non-Data Descriptor} \longrightarrow \text{Class } \texttt{\_\_dict\_\_} \longrightarrow \texttt{\_\_getattr\_\_()}$$
+In Python, regular functions are **Non-Data Descriptors**! When you call `instance.method()`, Python invokes `Class.method.__get__(instance, Class)`, dynamically returning a bound `types.MethodType` that binds `self` to the instance:
 
-1. **Data Descriptor** (`__set__` defined): Always wins over instance dictionaries!
-2. **Instance Dictionary** (`instance.__dict__["attr"]`): Standard attributes.
-3. **Non-Data Descriptor** (`__get__` only, such as methods): Resolved if not in instance dict.
-4. **Class Dictionary** (`cls.__dict__["attr"]`).
-5. **Fallback**: Calls `__getattr__()` if defined, else raises `AttributeError`.
+```python
+def talk(self): return f"Hello, I am {self.name}"
+
+class Person:
+    name = "Elena"
+    speak = talk # Non-data descriptor!
+
+p = Person()
+# Under the hood:
+bound_method = Person.speak.__get__(p, Person)
+print(bound_method()) # "Hello, I am Elena"
+```
+
+---
+
+## 5. `__slots__` Under the Hood: `member_descriptor`
+
+Declaring `__slots__ = ("x", "y")` suppresses the creation of `instance.__dict__`, allocating fixed C-struct offsets for attributes directly inside the `PyObject` structure:
+- Reduces memory consumption by $\approx 60\%$.
+- Attribute lookups are powered by C-level `member_descriptor` descriptors.
+
+---
+
+## 6. Flyweight Object Pool Pattern with `__new__`
+
+```python
+class ColorFlyweight:
+    _pool = {}
+
+    def __new__(cls, r: int, g: int, b: int):
+        key = (r, g, b)
+        if key not in cls._pool:
+            cls._pool[key] = super().__new__(cls)
+        return cls._pool[key]
+```
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master `__new__`, descriptors, method binding, `__slots__`, and flyweight allocation:
+
+---
+
+### 🟢 Tier 1: `__new__` Allocation Basics (Exercises 1–3)
+
+#### 🔹 Exercise 1: Custom Instance Allocator
+* **Goal**: Override `__new__` to log physical memory allocation before `__init__` executes.
+
+#### 🔹 Exercise 2: Class-Level Singleton
+* **Goal**: Implement a Singleton class that returns the same instance across multiple `ClassName()` calls.
+
+#### 🔹 Exercise 3: Immutable Subclassing (Subclassing `tuple` / `int`)
+* **Goal**: Subclass immutable `int` using `__new__` to enforce non-negative values.
+
+---
+
+### 🟡 Tier 2: Non-Data & Data Descriptors (Exercises 4–6)
+
+#### 🔹 Exercise 4: Non-Data Descriptor (Cached Property)
+* **Goal**: Implement a custom `@lazy_property` descriptor that computes a value once and caches it in `instance.__dict__`.
+
+#### 🔹 Exercise 5: Auto-Naming Descriptor (`__set_name__`)
+* **Goal**: Write a descriptor that automatically captures the target property name without hardcoding.
+
+#### 🔹 Exercise 6: Read-Only Data Descriptor
+* **Goal**: Implement a descriptor defining `__get__` and a `__set__` that raises `AttributeError("Read-only field")`.
+
+---
+
+### 🟠 Tier 3: Lookup Precedence & Memory Optimization (Exercises 7–9)
+
+#### 🔹 Exercise 7: Attribute Lookup Precedence Shadowing Test
+* **Goal**: Demonstrate how a Data Descriptor shadows an instance dict key, while a Non-Data Descriptor is shadowed by an instance dict key.
+
+#### 🔹 Exercise 8: High-Throughput Point Cloud with `__slots__`
+* **Goal**: Benchmark memory consumption of 1,000,000 coordinate objects with and without `__slots__`.
+
+#### 🔹 Exercise 9: Flyweight Immutable Particle Pool
+* **Goal**: Implement a Flyweight pool using `__new__` sharing 100 particle textures across 100,000 game entities.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Validated Climate Telemetry Descriptor Suite
+* **Goal**: Build an enterprise industrial sensor descriptor engine validating temperature and percentage boundary limits across telemetry models.
+
+---
 
 ---
 
@@ -233,10 +317,12 @@ You are developing a telemetry data model for an industrial climate control syst
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Telemetry Descriptors & 10 Challenges)</b></summary>
 
 ```python
-# 1. Percentage Descriptor (Level 5)
+# =====================================================================
+# SOLUTION: Climate Telemetry Descriptor Suite
+# =====================================================================
 class PercentageField:
     def __set_name__(self, owner, name):
         self.name = f"_{name}"
@@ -252,7 +338,6 @@ class PercentageField:
         setattr(instance, self.name, float(value))
 
 
-# 2. Temperature Descriptor (Level 5)
 class TemperatureField:
     def __set_name__(self, owner, name):
         self.name = f"_{name}"
@@ -270,7 +355,6 @@ class TemperatureField:
         setattr(instance, self.name, float(value))
 
 
-# 3. Model Class
 class ClimateSensorModel:
     temperature = TemperatureField()
     humidity = PercentageField()
@@ -280,12 +364,10 @@ class ClimateSensorModel:
         self.humidity = humidity
 
 
-# 4. Test Execution
+sensor = ClimateSensorModel(23.5, 65.0)
 print("==================================================")
 print("        CLIMATE TELEMETRY DESCRIPTOR SUITE        ")
 print("==================================================")
-
-sensor = ClimateSensorModel(23.5, 65.0)
 print(f"✅ Valid Sensor Ingest: {sensor.temperature:.2f}°C | Humidity: {sensor.humidity:.1f}%")
 
 try:
@@ -299,8 +381,59 @@ except ValueError as err:
     print(f"🚨 Humidity Guard: {err}")
 
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `PercentageField` and `TemperatureField` intercept attribute assignments on `ClimateSensorModel` instances, guaranteeing domain invariant protection across all instantiated sensor nodes.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Custom __new__
+class MemoryLogger:
+    def __new__(cls, *a, **kw):
+        inst = super().__new__(cls)
+        return inst
+
+# Ex 2: Singleton
+class AppConfig:
+    _inst = None
+    def __new__(cls):
+        if cls._inst is None: cls._inst = super().__new__(cls)
+        return cls._inst
+
+# Ex 3: Subclass int
+class PositiveInt(int):
+    def __new__(cls, val):
+        if val < 0: raise ValueError("Must be positive")
+        return super().__new__(cls, val)
+
+# Ex 4: Lazy Property
+class LazyProp:
+    def __init__(self, fn): self.fn = fn
+    def __get__(self, inst, owner):
+        if inst is None: return self
+        v = self.fn(inst)
+        inst.__dict__[self.fn.__name__] = v
+        return v
+
+# Ex 5: __set_name__
+class AutoName:
+    def __set_name__(self, owner, name): self.name = name
+
+# Ex 6: Read-Only Descriptor
+class ReadOnly:
+    def __set__(self, inst, val): raise AttributeError("Read-only")
+
+# Ex 7: Lookup Precedence
+# Data Descriptor (__set__) > Instance __dict__ > Non-Data (__get__ only)
+
+# Ex 8: __slots__
+class FastPoint:
+    __slots__ = ("x", "y")
+    def __init__(self, x, y): self.x, self.y = x, y
+
+# Ex 9: Flyweight Pool
+class Particle:
+    _pool = {}
+    def __new__(cls, tex):
+        if tex not in cls._pool: cls._pool[tex] = super().__new__(cls)
+        return cls._pool[tex]
+```
 </details>

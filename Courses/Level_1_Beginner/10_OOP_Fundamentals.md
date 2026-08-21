@@ -93,28 +93,63 @@ print(Employee.TOTAL_EMPLOYEES) # 2 (Updated by both instances)
 
 ---
 
-## 4. String Representations: `__str__` and `__repr__`
+---
 
-By default, printing an object outputs its raw memory pointer (`<__main__.Employee object at 0x7f8a10>`). Implementing special representation methods makes objects readable and easy to debug:
+## 5. Encapsulation & Access Conventions in Python
+
+Unlike C++ or Java, Python does not have strict `private` keywords enforced by the compiler. Instead, it relies on naming conventions:
+
+| Convention | Syntax | Meaning | Behavior |
+| :--- | :--- | :--- | :--- |
+| **Public** | `self.balance` | Part of public API | Directly accessible by all callers |
+| **Protected** | `self._balance` | Internal implementation detail | Accessible, but signals: "Do not touch outside the class hierarchy" |
+| **Private (Name Mangled)** | `self.__balance` | Strictly private to class | Python automatically mangles name to `_ClassName__balance` to prevent accidental override |
 
 ```python
-class Product:
-    def __init__(self, sku: str, name: str, price: float):
-        self.sku = sku
-        self.name = name
-        self.price = price
+class BankAccount:
+    def __init__(self, owner: str, initial_balance: float):
+        self.owner = owner          # Public
+        self._account_type = "SAVINGS" # Protected convention
+        self.__pin = "1234"         # Private (mangled to _BankAccount__pin)
 
-    # __str__: User-friendly string for print() and str()
-    def __str__(self) -> str:
-        return f"{self.name} (${self.price:.2f}) [{self.sku}]"
+account = BankAccount("Alice", 500.0)
+print(account.owner)            # "Alice"
+print(account._account_type)    # "SAVINGS" (Allowed, but discouraged)
+# print(account.__pin)          # ❌ AttributeError: 'BankAccount' object has no attribute '__pin'
+print(account._BankAccount__pin)# "1234" (Mangled name access)
+```
 
-    # __repr__: Unambiguous developer representation
-    def __repr__(self) -> str:
-        return f"Product(sku='{self.sku}', name='{self.name}', price={self.price})"
+---
 
-item = Product("SKU-99", "Mechanical Keyboard", 129.99)
-print(item)        # Calls __str__ -> Mechanical Keyboard ($129.99) [SKU-99]
-print(repr(item))  # Calls __repr__ -> Product(sku='SKU-99', name='Mechanical Keyboard', price=129.99)
+## 6. Instance Methods vs. `@classmethod` vs. `@staticmethod`
+
+```python
+class ServerCluster:
+    DEFAULT_REGION = "us-east-1"
+
+    def __init__(self, cluster_name: str, node_count: int):
+        self.cluster_name = cluster_name # Instance attribute
+        self.node_count = node_count
+
+    # 1. Instance Method: Receives 'self' (can read/modify instance and class state)
+    def scale_up(self, extra_nodes: int) -> None:
+        self.node_count += extra_nodes
+
+    # 2. Class Method: Receives 'cls' (can read/modify class state or act as factory constructor)
+    @classmethod
+    def create_development_cluster(cls, cluster_name: str):
+        return cls(f"DEV-{cluster_name}", node_count=2)
+
+    # 3. Static Method: Receives no automatic self/cls reference (utility function tied to class scope)
+    @staticmethod
+    def is_valid_cluster_name(name: str) -> bool:
+        return name.isalnum() and len(name) >= 3
+
+# Using instance, class, and static methods:
+dev_cluster = ServerCluster.create_development_cluster("Analytics")
+dev_cluster.scale_up(4)
+print(f"Cluster: {dev_cluster.cluster_name}, Nodes: {dev_cluster.node_count}")
+print(f"Name valid: {ServerCluster.is_valid_cluster_name('Analytics01')}")
 ```
 
 ---
@@ -247,6 +282,86 @@ You are developing the pharmacy dispensing and prescription validation system fo
 3. Instantiate test medications and patients, simulate prescriptions, and print out the patient medical record and remaining stock.
 
 > [!IMPORTANT]
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master class definition, constructor initialization, instance vs class attributes, encapsulation, dunder representations, and class/static methods:
+
+---
+
+### 🟢 Tier 1: Class Basics & Instance State (Exercises 1–3)
+
+#### 🔹 Exercise 1: Server Node Status Object
+* **Goal**: Define `class ServerNode` with `hostname: str` and `ip: str`. Add a boolean `is_online: bool = True` in `__init__`.
+* **Method**: `toggle_status()` flips the boolean and prints state.
+
+#### 🔹 Exercise 2: Point 2D Geometric Distance
+* **Goal**: Define `class Point` with `x: float` and `y: float`.
+* **Method**: `distance_to(other: Point) -> float` calculates Euclidean distance $\sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}$.
+
+#### 🔹 Exercise 3: String Representations (`__str__` and `__repr__`)
+* **Goal**: Define `class Book` with `title: str`, `author: str`, and `isbn: str`.
+* **Requirement**: Implement both `__str__` (e.g. `"<Title> by <Author>"`) and `__repr__` (e.g. `Book(title='...', ...)`).
+
+---
+
+### 🟡 Tier 2: State Mutation & Class Attributes (Exercises 4–6)
+
+#### 🔹 Exercise 4: Bank Account with Deposit & Withdrawal Guards
+* **Goal**: Define `class BankAccount` with `account_holder: str` and `balance: float = 0.0`.
+* **Methods**: `deposit(amount: float)` (checks amount > 0) and `withdraw(amount: float)` (checks amount > 0 and amount <= balance; returns `bool`).
+
+#### 🔹 Exercise 5: Global Class Instance Counter
+* **Goal**: Define `class DatabaseConnection` with class attribute `ACTIVE_CONNECTIONS = 0`.
+* **Requirement**: Increment counter on `__init__`, and implement a `close()` method that decrements counter and sets `self.connected = False`.
+
+#### 🔹 Exercise 6: Encapsulated Wallet with Name Mangling
+* **Goal**: Define `class DigitalWallet` with public `owner` and private `__secret_seed_phrase`.
+* **Requirement**: Demonstrate that accessing `wallet.__secret_seed_phrase` raises an `AttributeError`, but can be read via a dedicated `reveal_seed(master_password: str)` method.
+
+---
+
+### 🟠 Tier 3: Factory Methods & Class Relationships (Exercises 7–9)
+
+#### 🔹 Exercise 7: Alternative Constructor `@classmethod` Factory
+* **Goal**: Define `class UserProfile` with `username`, `email`, `role`.
+* **Requirement**: Implement `@classmethod from_csv_string(cls, raw_csv: str)` that splits `"alice,alice@co.com,admin"` and returns an instantiated object.
+
+#### 🔹 Exercise 8: Static Method Validator `@staticmethod`
+* **Goal**: Inside `class PasswordPolicy`, create `@staticmethod is_valid_password(password: str) -> bool` checking length and complexity without needing an instance.
+
+#### 🔹 Exercise 9: Aggregated Order and Line-Item Composite System
+* **Goal**: Define `class OrderItem` (`name`, `price`, `qty`) and `class ShoppingOrder` containing a list of `OrderItem` objects.
+* **Method**: `order.calculate_total()` sums item costs and returns formatted receipt.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Hospital Pharmacy Dispenser & Allergy Guard System
+* **Goal**: Multi-class domain architecture linking `Medication` inventory state with `Patient` medical charts, allergy safety verification, and automated stock depletion.
+
+---
+
+## 📝 Quick Exercise: Hospital Pharmacy Prescription Dispenser & Allergy Safety Gate
+
+### 🏢 Real-Life Scenario
+You are developing the pharmacy dispensing subsystem for a hospital electronic health record (EHR). When a physician issues a medication prescription for an admitted patient, the dispenser module checks the patient's known allergy records, verifies that the pharmacy has sufficient unit stock in inventory, updates the patient's active prescription chart, and decrements physical shelf inventory.
+
+### 📋 Requirements
+1. **Define `Medication` class**:
+   - `__init__(self, code: str, name: str, stock_units: int, unit_cost: float)`
+   - Method `dispense(self, units: int) -> bool`: Deducts units if `0 < units <= self.stock_units` and returns `True`; otherwise returns `False`.
+   - Method `restock(self, units: int) -> None`: Increments `stock_units`.
+   - Method `__str__(self) -> str`: Formats inventory summary.
+2. **Define `Patient` class**:
+   - `__init__(self, patient_id: str, name: str, allergies: list[str] = None)`: Initializes allergy set and an empty prescriptions list.
+   - Method `prescribe(self, med: Medication, units: int) -> tuple[bool, str]`:
+     - Inspect patient allergies. If any allergy keyword is found inside `med.name.lower()`, return `False, "ALLERGY ALERT: Patient is allergic to this medication!"`.
+     - Attempt to dispense from `med.dispense(units)`. If stock is insufficient, return `False, "INVENTORY ERROR: Insufficient pharmacy stock"`.
+     - If safe and in stock, add medication name to `self.prescriptions` and return `True, f"Successfully dispensed {units} units of {med.name}"`.
+3. Instantiate test medications and patients, simulate prescriptions, and print out the patient medical record and remaining stock.
+
+> [!IMPORTANT]
 > **Cumulative Level 1 Milestone Constraint**: Combine concepts from **Lessons 1 through 10** (variables, types, input/output, casting, operators, conditionals, loops, lists, sets, dicts, functions, exception safety, and OOP classes/methods).
 
 ### 🎯 Expected Output
@@ -272,10 +387,12 @@ UPDATED PHARMACY INVENTORY:
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Hospital & 10 Challenges)</b></summary>
 
 ```python
-# 1. Medication Domain Class (Lessons 1-10)
+# =====================================================================
+# SOLUTION: Hospital Pharmacy Dispenser
+# =====================================================================
 class Medication:
     def __init__(self, code: str, name: str, stock_units: int, unit_cost: float):
         self.code = code
@@ -297,7 +414,6 @@ class Medication:
         return f"[{self.code}] {self.name} - Stock: {self.stock_units} units (${self.unit_cost:.2f}/unit)"
 
 
-# 2. Patient Domain Class (Lessons 1-10)
 class Patient:
     def __init__(self, patient_id: str, name: str, allergies: list[str] = None):
         self.patient_id = patient_id
@@ -306,12 +422,10 @@ class Patient:
         self.prescriptions = []
 
     def prescribe(self, med: Medication, units: int) -> tuple[bool, str]:
-        # Check allergy safety (Lessons 4 & 7)
         for allergy in self.allergies:
             if allergy in med.name.lower():
                 return False, f"ALLERGY ALERT: Patient is allergic to this medication!"
 
-        # Attempt pharmacy inventory depletion (Lesson 10)
         if not med.dispense(units):
             return False, "INVENTORY ERROR: Insufficient pharmacy stock"
 
@@ -319,7 +433,6 @@ class Patient:
         return True, f"Successfully dispensed {units} units of {med.name}"
 
 
-# 3. Execution Simulation
 med1 = Medication("MED-01", "Amoxicillin 500mg", stock_units=50, unit_cost=12.50)
 med2 = Medication("MED-02", "Aspirin 100mg", stock_units=100, unit_cost=4.00)
 med3 = Medication("MED-03", "Ibuprofen 200mg", stock_units=5, unit_cost=6.00)
@@ -330,15 +443,12 @@ print("==================================================")
 print("           HOSPITAL PHARMACY DISPENSER            ")
 print("==================================================")
 
-# Test 1: Safe antibiotic prescription
 ok1, msg1 = patient.prescribe(med1, 10)
 print(f"Rx #1: {'✅' if ok1 else '❌'} {msg1}")
 
-# Test 2: Known allergy trigger
 ok2, msg2 = patient.prescribe(med2, 5)
 print(f"Rx #2: {'✅' if ok2 else '❌'} {msg2}")
 
-# Test 3: Insufficient inventory request (requesting 20, only 5 available)
 ok3, msg3 = patient.prescribe(med3, 20)
 print(f"Rx #3: {'✅' if ok3 else '❌'} {msg3}")
 
@@ -353,10 +463,86 @@ print("UPDATED PHARMACY INVENTORY:")
 for m in (med1, med2, med3):
     print(f"  - {m}")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `Medication` encapsulates stock state and guarantees that units cannot be dispensed if requested counts exceed available inventory.
-- `Patient` safeguards medication administration by checking incoming drug names against the patient's allergy set.
-- All 10 lessons of Level 1 (types, variables, operators, conditionals, loops, sequences, sets, dicts, functions, and OOP classes) work together in a unified system.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+class ServerNode:
+    def __init__(self, hostname: str, ip: str):
+        self.hostname, self.ip, self.is_online = hostname, ip, True
+    def toggle_status(self): self.is_online = not self.is_online
+
+# Ex 2:
+class Point:
+    def __init__(self, x: float, y: float): self.x, self.y = x, y
+    def distance_to(self, other: "Point") -> float:
+        return ((self.x - other.x)**2 + (self.y - other.y)**2) ** 0.5
+
+# Ex 3:
+class Book:
+    def __init__(self, title: str, author: str, isbn: str):
+        self.title, self.author, self.isbn = title, author, isbn
+    def __str__(self): return f"'{self.title}' by {self.author}"
+    def __repr__(self): return f"Book(title='{self.title}', author='{self.author}', isbn='{self.isbn}')"
+
+# Ex 4:
+class BankAccount:
+    def __init__(self, holder: str, balance: float = 0.0):
+        self.holder, self.balance = holder, balance
+    def deposit(self, amt: float):
+        if amt > 0: self.balance += amt
+    def withdraw(self, amt: float) -> bool:
+        if 0 < amt <= self.balance:
+            self.balance -= amt
+            return True
+        return False
+
+# Ex 5:
+class DatabaseConnection:
+    ACTIVE = 0
+    def __init__(self):
+        DatabaseConnection.ACTIVE += 1
+        self.connected = True
+    def close(self):
+        if self.connected:
+            DatabaseConnection.ACTIVE -= 1
+            self.connected = False
+
+# Ex 6:
+class DigitalWallet:
+    def __init__(self, owner: str, seed: str):
+        self.owner = owner
+        self.__secret_seed_phrase = seed
+    def reveal_seed(self, pw: str):
+        return self.__secret_seed_phrase if pw == "admin123" else "Access Denied"
+
+# Ex 7:
+class UserProfile:
+    def __init__(self, username: str, email: str, role: str):
+        self.username, self.email, self.role = username, email, role
+    @classmethod
+    def from_csv_string(cls, raw: str):
+        u, e, r = raw.split(",")
+        return cls(u.strip(), e.strip(), r.strip())
+
+# Ex 8:
+class PasswordPolicy:
+    @staticmethod
+    def is_valid_password(pw: str) -> bool:
+        return len(pw) >= 8 and any(c.isupper() for c in pw) and any(c.isdigit() for c in pw)
+
+# Ex 9:
+class OrderItem:
+    def __init__(self, name: str, price: float, qty: int):
+        self.name, self.price, self.qty = name, price, qty
+    @property
+    def line_total(self): return self.price * self.qty
+
+class ShoppingOrder:
+    def __init__(self): self.items: list[OrderItem] = []
+    def add_item(self, item: OrderItem): self.items.append(item)
+    def calculate_total(self) -> float: return sum(i.line_total for i in self.items)
+```
 </details>
+

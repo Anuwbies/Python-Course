@@ -73,33 +73,82 @@ def generate_payroll_report(staff_roster: list[Employee]) -> None:
 
 ---
 
-## 3. Multiple Inheritance, Mixins & Method Resolution Order (MRO)
+---
 
-Python supports inheriting from multiple base classes simultaneously. To prevent ambiguity (the "Diamond Problem"), Python resolves method calls using the **C3 Linearization algorithm (MRO)**.
+## 4. Under the Hood: C3 Linearization & Method Resolution Order (MRO)
 
-### Mixin Classes
-A **Mixin** is a lightweight, focused class designed to inject specific reusable functionality into other classes without defining standalone business entities.
+When multiple inheritance creates complex inheritance diamonds, Python determines the exact method lookup sequence using the **C3 Linearization Algorithm**:
+
+```
+        ┌───────────────┐
+        │    object     │
+        └───────┬───────┘
+                ▲
+        ┌───────┴───────┐
+        │  BaseService  │
+        └───────┬───────┘
+          ▲           ▲
+   ┌──────┴─────┐ ┌───┴─────────┐
+   │ AuthMixin  │ │ LoggerMixin │
+   └──────┬─────┘ └───┬─────────┘
+          ▲           ▲
+          └─────┬─────┘
+        ┌───────┴───────┐
+        │  UserService  │
+        └───────────────┘
+```
+
+### 🧠 How C3 Linearization Works
+1. **Local Precedence**: Subclasses appear before base classes (`UserService` before `AuthMixin`).
+2. **Order of Declaration**: Classes declared first in `class Child(A, B):` take precedence over those declared later (`A` before `B`).
+3. **Monotonicity**: If class $A$ precedes class $B$ in any sub-hierarchy, it must precede $B$ across the entire resolved MRO.
+
+You can view the MRO of any class using `.mro()` or `.__mro__`:
+```python
+print([c.__name__ for c in SecurityLead.mro()])
+# ['SecurityLead', 'Manager', 'Employee', 'TimestampAuditMixin', 'EncryptionMixin', 'object']
+```
+
+### ⚡ Cooperative Multiple Inheritance with `super()` and `**kwargs`
+To ensure all parent classes in a diamond hierarchy initialize without hardcoded class names, use cooperative `super().__init__(**kwargs)`:
 
 ```python
-class TimestampAuditMixin:
-    """Injects timestamp auditing capabilities."""
-    def log_action(self, action: str) -> None:
-        print(f"[AUDIT LOG] {self.__class__.__name__} ({getattr(self, 'emp_id', 'N/A')}): {action}")
+class BaseComponent:
+    def __init__(self, **kwargs):
+        super().__init__() # Calls object.__init__()
+        print("BaseComponent Initialized")
 
-class EncryptionMixin:
-    """Injects payload hashing simulation."""
-    def hash_identifier(self) -> str:
-        return f"HASH-SHA256:{hash(getattr(self, 'emp_id', ''))}"
+class LoggingComponent(BaseComponent):
+    def __init__(self, log_level: str = "INFO", **kwargs):
+        super().__init__(**kwargs)
+        self.log_level = log_level
+        print(f"LoggingComponent ({self.log_level}) Initialized")
 
-# Multiple Inheritance: Inherits from Manager + two orthogonal Mixins
-class SecurityLead(Manager, TimestampAuditMixin, EncryptionMixin):
-    def authorize_security_override(self) -> None:
-        self.log_action("Authorized tier-3 emergency infrastructure bypass")
+class NetworkComponent(BaseComponent):
+    def __init__(self, port: int = 8080, **kwargs):
+        super().__init__(**kwargs)
+        self.port = port
+        print(f"NetworkComponent (Port {self.port}) Initialized")
 
-# Inspecting the C3 Method Resolution Order
-print([cls.__name__ for cls in SecurityLead.mro()])
-# Output: ['SecurityLead', 'Manager', 'Employee', 'TimestampAuditMixin', 'EncryptionMixin', 'object']
+# Diamond Child
+class ServerApplication(LoggingComponent, NetworkComponent):
+    def __init__(self, app_name: str, **kwargs):
+        super().__init__(**kwargs)
+        self.app_name = app_name
+        print(f"ServerApplication '{self.app_name}' Ready!")
+
+app = ServerApplication(app_name="OrderAPI", log_level="DEBUG", port=443)
 ```
+
+---
+
+## 5. Type Checking: `isinstance()` vs. `issubclass()` vs. `type()`
+
+| Check | Syntax | Meaning | Handles Inheritance? |
+| :--- | :--- | :--- | :---: |
+| **Exact Type** | `type(obj) is Class` | Checks if `obj` was instantiated strictly from `Class` | ❌ No |
+| **Instance Check** | `isinstance(obj, (Base, Mixin))` | Checks if `obj` is an instance of `Base` or any subclass | ✅ Yes |
+| **Subclass Check** | `issubclass(Child, Parent)` | Checks if `Child` inherits from `Parent` | ✅ Yes |
 
 ---
 
@@ -242,6 +291,64 @@ execute_merchant_batch(batch_queue, gateway_directory)
 
 ---
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master class hierarchies, constructor chaining with `super()`, polymorphic dispatch, mixins, and diamond MRO linearization:
+
+---
+
+### 🟢 Tier 1: Single Inheritance & Method Overriding (Exercises 1–3)
+
+#### 🔹 Exercise 1: Vehicle & Electric Car Extension
+* **Goal**: Create `class Vehicle(make: str, model: str, base_price: float)`. Subclass `ElectricVehicle` that adds `battery_kwh: float` in `__init__` via `super()` and overrides `get_specs()` to include battery capacity.
+
+#### 🔹 Exercise 2: Employee Compensation Specialization
+* **Goal**: Base class `Employee` with `calculate_bonus() -> float` returning `0.05 * salary`.
+* **Subclasses**: `SalesManager` (returns `0.15 * salary + commission`) and `Executive` (returns `0.30 * salary + equity_value`).
+
+#### 🔹 Exercise 3: Geometric Shape Polymorphic Renderer
+* **Goal**: Base class `Shape` with `area()` and `perimeter()`.
+* **Subclasses**: `Circle(radius)` and `Rectangle(width, height)`. Write a polymorphic function `print_shape_metrics(shapes: list[Shape])`.
+
+---
+
+### 🟡 Tier 2: Mixin Architecture & Orthogonal Capabilities (Exercises 4–6)
+
+#### 🔹 Exercise 4: JSON Serializable Mixin
+* **Goal**: Define `class JSONSerializableMixin` with method `to_json() -> str` that returns `json.dumps(self.__dict__)`.
+* **Requirement**: Inherit this mixin into a `UserAccount` class and verify serialized string.
+
+#### 🔹 Exercise 5: Timestamp Audit Log Mixin
+* **Goal**: Define `class AuditMixin` with `log_mutation(action: str)`.
+* **Requirement**: Apply to `DatabaseRecord` and demonstrate audit outputs when saving and deleting.
+
+#### 🔹 Exercise 6: Role Permission Guard Mixin
+* **Goal**: Define `class PermissionGuardMixin` with `require_permission(perm: str)`. If user lacks permission in `self.permissions`, raise `PermissionError`.
+
+---
+
+### 🟠 Tier 3: Multiple Inheritance & Diamond MRO (Exercises 7–9)
+
+#### 🔹 Exercise 7: Diamond Problem MRO Inspector
+* **Goal**: Create diamond hierarchy: `A` $\rightarrow$ `B(A)`, `C(A)` $\rightarrow$ `D(B, C)`.
+* **Requirement**: In each class `ping()`, call `super().ping()`. Trace the exact print order and verify with `D.mro()`.
+
+#### 🔹 Exercise 8: Cooperative `super().__init__(**kwargs)` Initializer
+* **Goal**: Implement multi-base initialization where each class strips its known keyword arguments and forwards `**kwargs` up the cooperative MRO chain to `object`.
+
+#### 🔹 Exercise 9: Polymorphic Plugin Dispatch Engine
+* **Goal**: Create `BasePlugin` and subclasses `AuthPlugin`, `CompressionPlugin`, `RateLimitPlugin`.
+* **Requirement**: Write an orchestrator pipeline that runs `.execute(payload)` across all registered plugins in priority order.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Multi-Cloud Infrastructure Resource Provisioner
+* **Goal**: Model diverse cloud assets (`VirtualMachine`, `StorageBucket`) using inheritance and mixins, enforce audit trails, and calculate polymorphic infrastructure invoices.
+
+---
+
 ## 📝 Quick Exercise: Multi-Cloud Infrastructure Resource Provisioner
 
 ### 🏢 Real-Life Scenario
@@ -288,16 +395,17 @@ TOTAL PROJECTED MONTHLY CLOUD SPEND:                           $626.00
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Multi-Cloud & 10 Challenges)</b></summary>
 
 ```python
-# 1. Audit Telemetry Mixin (Level 2)
+# =====================================================================
+# SOLUTION: Multi-Cloud Infrastructure Engine
+# =====================================================================
 class AuditTelemetryMixin:
     def log_event(self, action: str) -> None:
         print(f"[CLOUD AUDIT] {self.__class__.__name__} ({self.resource_id}): {action}")
 
 
-# 2. Base Cloud Resource Class (Level 2)
 class CloudResource:
     def __init__(self, resource_id: str, name: str, region: str):
         self.resource_id = resource_id
@@ -315,7 +423,6 @@ class CloudResource:
         return 0.0
 
 
-# 3. Virtual Machine Subclass (Level 2)
 class VirtualMachine(CloudResource, AuditTelemetryMixin):
     def __init__(self, resource_id: str, name: str, region: str, cpu_cores: int, hourly_rate: float):
         super().__init__(resource_id, name, region)
@@ -327,11 +434,9 @@ class VirtualMachine(CloudResource, AuditTelemetryMixin):
         self.log_event("Started VM instance and initialized hypervisor")
 
     def calculate_monthly_cost(self) -> float:
-        # 730 continuous operational hours in an average month
         return (730.0 * self.hourly_rate) if self.is_running else 5.00
 
 
-# 4. Storage Bucket Subclass (Level 2)
 class StorageBucket(CloudResource, AuditTelemetryMixin):
     def __init__(self, resource_id: str, name: str, region: str, stored_gigabytes: float, cost_per_gb: float = 0.023):
         super().__init__(resource_id, name, region)
@@ -342,19 +447,16 @@ class StorageBucket(CloudResource, AuditTelemetryMixin):
         return self.stored_gigabytes * self.cost_per_gb
 
 
-# 5. Infrastructure Deployment and Execution
 infrastructure: list[CloudResource] = [
     VirtualMachine("vm-aws-prod-01", "Web API Node", "us-east-1", cpu_cores=4, hourly_rate=0.20),
     VirtualMachine("vm-gcp-ml-02", "AI Model Server", "europe-west1", cpu_cores=16, hourly_rate=0.50),
     StorageBucket("s3-archive-01", "Customer Data Lake", "us-west-2", stored_gigabytes=5000.0),
 ]
 
-# Start VM assets
 for res in infrastructure:
     if isinstance(res, VirtualMachine):
         res.start()
 
-# Print Formatted Multi-Cloud Invoice (Level 1 f-strings)
 print("=" * 70)
 print(f"{'MULTI-CLOUD INFRASTRUCTURE INVOICE':^70}")
 print("=" * 70)
@@ -370,10 +472,82 @@ for res in infrastructure:
 print("-" * 70)
 print(f"{'TOTAL PROJECTED MONTHLY CLOUD SPEND:':<50} {f'${total_spend:,.2f}':>17}")
 print("=" * 70)
-```
 
-**Explanation of the Solution:**
-- `CloudResource` defines common properties and the polymorphic contract `.calculate_monthly_cost()`.
-- `VirtualMachine` delegates to `super().start()` while using `AuditTelemetryMixin` to log operations.
-- The invoice consumer loops over polymorphic objects and sums costs cleanly.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+class Vehicle:
+    def __init__(self, make: str, model: str, price: float):
+        self.make, self.model, self.price = make, model, price
+    def get_specs(self): return f"{self.make} {self.model} (${self.price:,.2f})"
+
+class ElectricVehicle(Vehicle):
+    def __init__(self, make: str, model: str, price: float, battery_kwh: float):
+        super().__init__(make, model, price)
+        self.battery_kwh = battery_kwh
+    def get_specs(self): return f"{super().get_specs()} [{self.battery_kwh} kWh Battery]"
+
+# Ex 2:
+class Employee:
+    def __init__(self, name: str, salary: float): self.name, self.salary = name, salary
+    def calculate_bonus(self): return self.salary * 0.05
+
+class SalesManager(Employee):
+    def __init__(self, name: str, salary: float, commission: float):
+        super().__init__(name, salary); self.commission = commission
+    def calculate_bonus(self): return (self.salary * 0.15) + self.commission
+
+# Ex 3:
+import math
+class Shape:
+    def area(self): return 0.0
+class Circle(Shape):
+    def __init__(self, r: float): self.r = r
+    def area(self): return math.pi * (self.r ** 2)
+
+# Ex 4:
+import json
+class JSONSerializableMixin:
+    def to_json(self): return json.dumps(self.__dict__)
+
+# Ex 5:
+import datetime
+class AuditMixin:
+    def log_mutation(self, act: str):
+        print(f"[{datetime.datetime.now().isoformat()}] {self.__class__.__name__}: {act}")
+
+# Ex 6:
+class PermissionGuardMixin:
+    def require_permission(self, perm: str):
+        if perm not in getattr(self, "permissions", set()):
+            raise PermissionError(f"Missing required permission: {perm}")
+
+# Ex 7:
+class A:
+    def ping(self): print("A", end=" ")
+class B(A):
+    def ping(self): print("B", end=" "); super().ping()
+class C(A):
+    def ping(self): print("C", end=" "); super().ping()
+class D(B, C):
+    def ping(self): print("D", end=" "); super().ping()
+
+# Ex 8:
+class BaseComp:
+    def __init__(self, **kw): super().__init__()
+class Alpha(BaseComp):
+    def __init__(self, a=1, **kw): self.a = a; super().__init__(**kw)
+class Beta(BaseComp):
+    def __init__(self, b=2, **kw): self.b = b; super().__init__(**kw)
+class Combined(Alpha, Beta): pass
+
+# Ex 9:
+class BasePlugin:
+    def run(self, payload: dict) -> dict: return payload
+class CompressionPlugin(BasePlugin):
+    def run(self, payload: dict):
+        payload["compressed"] = True; return payload
+```
 </details>
+

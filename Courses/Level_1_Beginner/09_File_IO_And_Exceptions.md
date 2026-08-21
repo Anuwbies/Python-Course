@@ -95,15 +95,71 @@ def read_metric_file(filepath: str) -> None:
 
 ---
 
-## 4. Raising Exceptions Manually (`raise`)
+## 4. Modern Path Handling with `pathlib.Path`
 
-You can raise exceptions when domain invariants or validation rules are violated:
+In modern Python 3.4+, **`pathlib`** is the standard, object-oriented, cross-platform filesystem library that replaces older `os.path` functions:
 
 ```python
-def set_server_port(port: int) -> None:
-    if not (1 <= port <= 65535):
-        raise ValueError(f"Port {port} is invalid! Must be between 1 and 65535.")
-    print(f"Server bound to port {port}.")
+from pathlib import Path
+
+# Constructing cross-platform paths using the division (/) operator:
+base_dir = Path("data") / "telemetry"
+config_file = base_dir / "settings.json"
+
+# Creating parent directories safely (mkdir -p equivalent):
+base_dir.mkdir(parents=True, exist_ok=True)
+
+# Rapid text writing and reading without explicit with-open boilerplate:
+config_file.write_text('{"env": "production", "debug": false}', encoding="utf-8")
+print(config_file.read_text(encoding="utf-8"))
+
+# Inspecting file properties:
+print(f"Exists: {config_file.exists()}")
+print(f"Is File: {config_file.is_file()}")
+print(f"File Name: {config_file.name}, Stem: {config_file.stem}, Suffix: {config_file.suffix}")
+```
+
+---
+
+## 5. The Python Exception Hierarchy & Anti-Patterns
+
+All exceptions in Python inherit from `BaseException`:
+
+```
+BaseException
+ ├── SystemExit (Triggered by sys.exit())
+ ├── KeyboardInterrupt (Triggered by Ctrl+C)
+ └── Exception (Base class for all non-exit exceptions)
+      ├── StandardError
+      │    ├── ArithmeticError (ZeroDivisionError, OverflowError)
+      │    ├── LookupError (IndexError, KeyError)
+      │    ├── ValueError
+      │    ├── TypeError
+      │    └── OSError (FileNotFoundError, PermissionError)
+      └── ...
+```
+
+> [!CAUTION]
+> **Never use a bare `except:` or `except BaseException:`!**
+> Catching `BaseException` will intercept `KeyboardInterrupt` (preventing you from stopping a runaway loop with `Ctrl+C`) and `SystemExit`.
+> Always catch specific exceptions (e.g. `except (ValueError, FileNotFoundError):`), or at most `except Exception:` for top-level fallback logging.
+
+---
+
+## 6. Raising Exceptions & Exception Chaining (`from`)
+
+You can raise exceptions when domain invariants are violated, and preserve original traceback context using `raise ... from err`:
+
+```python
+def parse_positive_int(raw_text: str) -> int:
+    try:
+        val = int(raw_text)
+        if val <= 0:
+            raise ValueError(f"Value must be strictly positive, got {val}")
+        return val
+    except ValueError as err:
+        # Explicit exception chaining preserving root cause context:
+        raise RuntimeError("Configuration parsing failure") from err
 ```
 
 ---
@@ -225,6 +281,67 @@ if os.path.exists(ALERT_REPORT_FILENAME):
 
 ---
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master context managers, file stream I/O, `pathlib`, custom error validation, exception hierarchies, and resilient error recovery:
+
+---
+
+### 🟢 Tier 1: File Writing & Reading Basics (Exercises 1–3)
+
+#### 🔹 Exercise 1: Single-Line Config Writer & Reader
+* **Goal**: Use `with open("server_port.cfg", "w")` to write `"PORT=8080"`.
+* **Requirement**: Reopen in `"r"` mode, read the string, and print the parsed integer port.
+
+#### 🔹 Exercise 2: Multi-Line Activity Log Appender
+* **Goal**: Open a file `"audit_trail.log"` in `"a"` (append) mode.
+* **Requirement**: Append three timestamped event lines. Reopen in `"r"` mode and print total line count.
+
+#### 🔹 Exercise 3: Safe Division with ZeroDivisionError Guard
+* **Goal**: Write a function `safe_divide(numerator: float, denominator: float) -> float`.
+* **Requirement**: Catch `ZeroDivisionError` and return `0.0`.
+
+---
+
+### 🟡 Tier 2: Pathlib & Multi-Exception Handling (Exercises 4–6)
+
+#### 🔹 Exercise 4: Modern `pathlib.Path` Ingestor
+* **Goal**: Use `Path("config.json")`.
+* **Requirement**: Write JSON text using `.write_text()`, verify existence with `.exists()`, read text with `.read_text()`, and delete with `.unlink()`.
+
+#### 🔹 Exercise 5: Multi-Exception Block with `else` and `finally`
+* **Goal**: Prompt for a filename and integer divisor.
+* **Requirement**: Structure a full `try...except (FileNotFoundError, ValueError, ZeroDivisionError)...else...finally` block that reliably reports whether execution succeeded.
+
+#### 🔹 Exercise 6: Line-by-Line Filter Stream
+* **Goal**: Write a 10-line text file containing mixed log levels (`INFO`, `WARNING`, `ERROR`).
+* **Requirement**: Stream line by line and write only `ERROR` lines to `"errors_only.log"`.
+
+---
+
+### 🟠 Tier 3: Custom Invariants & Exception Chaining (Exercises 7–9)
+
+#### 🔹 Exercise 7: User Age Domain Invariant Validator
+* **Goal**: Write a function `validate_user_age(age_str: str) -> int`.
+* **Rules**: If non-digit, catch and raise `ValueError("Age must be integer")`. If `not (0 <= age <= 120)`, raise `ValueError("Age out of human bounds")`.
+
+#### 🔹 Exercise 8: Exception Chaining with `raise ... from`
+* **Goal**: Write a function `load_database_port(filepath: str) -> int`.
+* **Requirement**: If file reading or parsing fails, catch the error and `raise RuntimeError("Database config unavailable") from err`.
+
+#### 🔹 Exercise 9: CSV Record Cleaner with Skipped Malformed Lines
+* **Goal**: Given a CSV string with varying column lengths and bad numbers.
+* **Requirement**: Parse line by line; accumulate valid records into a list of dicts while logging line numbers of corrupted rows into a `skipped_lines` list.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Bank Transaction CSV Ingestion & Balance Reconciler
+* **Goal**: Read and validate CSV financial transactions, update account balances in memory, guard against overdrafts and corrupted rows, and print reconciliation summary.
+
+---
+
 ## 📝 Quick Exercise: Bank Account Transaction CSV Importer & Balance Reconciler
 
 ### 🏢 Real-Life Scenario
@@ -276,14 +393,16 @@ FINAL RECONCILED ACCOUNT BALANCES:
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Transaction CSV & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Bank Transaction Ingestion Engine
+# =====================================================================
 import os
 
 CSV_FILE = "daily_transactions.csv"
 
-# 1. Create sample transaction feed (Lesson 9)
 sample_csv = """TXN-101,SAVINGS,DEPOSIT,500.00
 TXN-102,CHECKING,WITHDRAW,150.00
 TXN-CORRUPT-BAD-FORMAT
@@ -296,7 +415,6 @@ TXN-106,INVESTMENT,DEPOSIT,1000.00
 with open(CSV_FILE, "w", encoding="utf-8") as f:
     f.write(sample_csv)
 
-# 2. Transaction Ingestion Engine (Lessons 1-9)
 def process_transactions_csv(filepath: str) -> dict:
     balances = {"SAVINGS": 1500.00, "CHECKING": 800.00, "INVESTMENT": 5000.00}
     stats = {"total_rows": 0, "success": 0, "corrupt": 0, "overdraft": 0}
@@ -342,7 +460,6 @@ def process_transactions_csv(filepath: str) -> dict:
 
     return {"stats": stats, "balances": balances}
 
-# 3. Run and Display Report
 results = process_transactions_csv(CSV_FILE)
 st = results["stats"]
 bal = results["balances"]
@@ -360,12 +477,80 @@ for acc_name in sorted(bal.keys()):
     print(f"  - {acc_name:<12} ${bal[acc_name]:,.2f}")
 print("==================================================")
 
-# Cleanup
 if os.path.exists(CSV_FILE):
     os.remove(CSV_FILE)
-```
 
-**Explanation of the Solution:**
-- `try...except (ValueError, KeyError)` catches both invalid column formatting, bad numeric conversions, and unrecognized account keys without crashing the batch loop.
-- Balances are accurately reconciled in a dictionary with proper overdraft protection checks.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+with open("port.cfg", "w") as f: f.write("PORT=8080\n")
+with open("port.cfg", "r") as f: port = int(f.read().strip().split("=")[1])
+print(f"Parsed Port: {port}")
+os.remove("port.cfg")
+
+# Ex 2:
+with open("audit.log", "a") as f:
+    f.write("EVT-1: Init\nEVT-2: Auth\nEVT-3: Ready\n")
+with open("audit.log", "r") as f: lines = len(f.readlines())
+print(f"Audit Lines: {lines}")
+os.remove("audit.log")
+
+# Ex 3:
+def safe_divide(n: float, d: float) -> float:
+    try: return n / d
+    except ZeroDivisionError: return 0.0
+
+# Ex 4:
+from pathlib import Path
+p = Path("test_cfg.json")
+p.write_text('{"status": "ok"}', encoding="utf-8")
+print(f"Pathlib Content: {p.read_text()}")
+p.unlink()
+
+# Ex 5:
+try:
+    val = 100 / int("10")
+except (ValueError, ZeroDivisionError) as err:
+    print(f"Handled error: {err}")
+else:
+    print(f"Calculated result: {val}")
+finally:
+    print("Execution complete.")
+
+# Ex 6:
+raw_logs = "INFO: boot\nERROR: disk full\nWARNING: mem high\nERROR: timeout\n"
+Path("all.log").write_text(raw_logs)
+with open("all.log", "r") as src, open("err.log", "w") as dst:
+    for l in src:
+        if l.startswith("ERROR:"): dst.write(l)
+print(f"Errors Filtered:\n{Path('err.log').read_text()}")
+Path("all.log").unlink(); Path("err.log").unlink()
+
+# Ex 7:
+def validate_user_age(age_str: str) -> int:
+    try: a = int(age_str)
+    except ValueError: raise ValueError("Age must be integer")
+    if not (0 <= a <= 120): raise ValueError("Age out of human bounds")
+    return a
+
+# Ex 8:
+def load_database_port(filepath: str) -> int:
+    try:
+        with open(filepath) as f: return int(f.read().strip())
+    except Exception as err:
+        raise RuntimeError("Database config unavailable") from err
+
+# Ex 9:
+csv_data = "user1,25\nbad_row\nuser2,not_num\nuser3,30"
+records, skipped = [], []
+for idx, row in enumerate(csv_data.split("\n"), start=1):
+    parts = row.split(",")
+    if len(parts) == 2 and parts[1].isdigit():
+        records.append({"user": parts[0], "age": int(parts[1])})
+    else:
+        skipped.append(idx)
+print(f"Valid: {records} | Skipped Row Indices: {skipped}")
+```
 </details>
+

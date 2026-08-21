@@ -71,25 +71,99 @@ def run_migrations_online():
 
 ---
 
-## 3. Essential Alembic CLI Workflows
+---
+
+## 4. Zero-Downtime Migration Pattern (Expand & Contract)
+
+In production high-availability systems with active web servers, running destructive migrations (e.g. renaming a column from `old_col` to `new_col`) immediately causes downtime because existing running app versions crash trying to query `old_col`.
+
+### The 3-Phase Expand & Contract Strategy:
+1. **Phase 1 (Expand)**: Add `new_col` as nullable. Deploy new app version writing to *both* `old_col` and `new_col`, but reading from `old_col`.
+2. **Phase 2 (Backfill & Switch)**: Run background data backfill script copying old data into `new_col`. Deploy app version reading from `new_col`.
+3. **Phase 3 (Contract)**: Drop `old_col` and enforce `NOT NULL` on `new_col`.
+
+---
+
+## 5. Resolving Multi-Head Migration Conflicts
+
+When two engineers create migrations on separate Git branches simultaneously, merging causes **Multiple Heads**:
 
 ```bash
-# 1. Initialize Alembic with async template:
-$ alembic init -t async migrations
+# Check for split migration branches:
+$ alembic heads
+# Output:
+# 3a1b8c2d (head) - Feature A
+# 7f9e1d4c (head) - Feature B
 
-# 2. Inspect SQLAlchemy models and generate a diff migration automatically:
-$ alembic revision --autogenerate -m "Add phone_number and mfa_enabled to users"
-
-# 3. Apply all pending migrations up to the latest revision:
-$ alembic upgrade head
-
-# 4. Rollback the most recent migration:
-$ alembic downgrade -1
-
-# 5. View migration history and current database revision:
-$ alembic history --verbose
-$ alembic current
+# Merge branches into a single unified revision:
+$ alembic merge -m "Merge branch A and B revisions" 3a1b8c2d 7f9e1d4c
 ```
+
+---
+
+## 6. SQLite Batch Migration Mode (`render_as_batch=True`)
+
+SQLite does not natively support altering columns or dropping foreign keys via standard `ALTER TABLE`. Alembic's **Batch Mode** recreates the table, copies existing rows, and replaces the old table seamlessly:
+
+```python
+with op.batch_alter_table("users", schema=None) as batch_op:
+    batch_op.alter_column("email", type_=sa.String(300), nullable=False)
+    batch_op.drop_constraint("fk_old_company", type_="foreignkey")
+```
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master Alembic migrations, revisions, autogeneration, zero-downtime evolution, and conflict merging:
+
+---
+
+### 🟢 Tier 1: Alembic Configuration & Basic Revisions (Exercises 1–3)
+
+#### 🔹 Exercise 1: Configure `alembic.ini`
+* **Goal**: Point `sqlalchemy.url` to an environment variable `os.environ["DATABASE_URL"]`.
+
+#### 🔹 Exercise 2: Create First Manual Revision
+* **Goal**: Write an Alembic migration script creating a `users` table with `op.create_table()`.
+
+#### 🔹 Exercise 3: Inspect Current Revision
+* **Goal**: Use `alembic current` and query the `alembic_version` table.
+
+---
+
+### 🟡 Tier 2: Column Additions & Autogeneration (Exercises 4–6)
+
+#### 🔹 Exercise 4: Autogenerate Diff Migration
+* **Goal**: Add a `bio` column to a SQLAlchemy model and run `alembic revision --autogenerate`.
+
+#### 🔹 Exercise 5: Reversible Downgrade Script
+* **Goal**: Verify that calling `alembic downgrade -1` cleanly removes added columns without data corruption.
+
+#### 🔹 Exercise 6: Adding Unique Index via Migration
+* **Goal**: Write `op.create_index("idx_user_email", "users", ["email"], unique=True)`.
+
+---
+
+### 🟠 Tier 3: Zero-Downtime & Multi-Head Merging (Exercises 7–9)
+
+#### 🔹 Exercise 7: SQLite Batch Mode Column Modification
+* **Goal**: Use `op.batch_alter_table()` to alter a column type in SQLite.
+
+#### 🔹 Exercise 8: Resolve Multiple Migration Heads
+* **Goal**: Simulate two conflicting migration branches and merge them with `alembic merge`.
+
+#### 🔹 Exercise 9: Zero-Downtime Column Rename Simulation
+* **Goal**: Implement Phase 1 of Expand-and-Contract by adding a new column and writing a data sync trigger.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Multi-Factor Authentication Schema Migration Runner
+* **Goal**: Build a programmatic schema migration engine executing forward upgrades and rollback downgrades on live authentication tables.
+
+---
 
 ---
 
@@ -273,9 +347,12 @@ You are the lead database engineer preparing an Alembic migration script for an 
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (MFA Migration & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Multi-Factor Authentication Schema Migration Runner
+# =====================================================================
 import sqlite3
 import os
 
@@ -283,12 +360,10 @@ DB_TEST = "test_mfa_migration.db"
 if os.path.exists(DB_TEST):
     os.remove(DB_TEST)
 
-# 1. Base Setup
 conn = sqlite3.connect(DB_TEST)
 conn.execute("CREATE TABLE accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE NOT NULL);")
 conn.commit()
 
-# 2. Migration Functions (Level 4)
 def upgrade_add_mfa(connection: sqlite3.Connection):
     connection.execute("ALTER TABLE accounts ADD COLUMN totp_secret TEXT DEFAULT NULL;")
     connection.execute("ALTER TABLE accounts ADD COLUMN failed_login_attempts INTEGER DEFAULT 0 NOT NULL;")
@@ -299,8 +374,6 @@ def downgrade_add_mfa(connection: sqlite3.Connection):
     connection.execute("ALTER TABLE accounts DROP COLUMN failed_login_attempts;")
     connection.commit()
 
-
-# 3. Execution Run
 print("==================================================")
 print("        ALEMBIC SECURITY MIGRATION RUNNER         ")
 print("==================================================")
@@ -308,14 +381,12 @@ print("⏩ Running migration: 20260819_add_security_mfa (upgrade)")
 upgrade_add_mfa(conn)
 print("  ✓ Columns 'totp_secret' and 'failed_login_attempts' added.")
 
-# Verify insert with new columns
 conn.execute("INSERT INTO accounts (email, totp_secret, failed_login_attempts) VALUES (?, ?, ?)",
              ("elena@corp.com", "SECRET_KEY_XYZ_99", 0))
 conn.commit()
 row = conn.execute("SELECT * FROM accounts WHERE email = 'elena@corp.com'").fetchone()
 print(f"  ✓ Inserted verified account: {row}")
 
-# Rollback
 print("⏪ Running migration: 20260819_add_security_mfa (downgrade)")
 downgrade_add_mfa(conn)
 print("  ✓ Rolled back MFA columns successfully.")
@@ -324,9 +395,35 @@ print("==================================================")
 conn.close()
 if os.path.exists(DB_TEST):
     os.remove(DB_TEST)
-```
 
-**Explanation of the Solution:**
-- `upgrade_add_mfa` extends the schema safely without destroying existing rows.
-- `downgrade_add_mfa` reverses schema additions cleanly in case deployment rollback is required.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: alembic.ini config
+# sqlalchemy.url = %(DATABASE_URL)s
+
+# Ex 2: op.create_table
+# op.create_table('users', sa.Column('id', sa.Integer, primary_key=True), sa.Column('email', sa.String, nullable=False))
+
+# Ex 3: alembic current
+# alembic current --verbose
+
+# Ex 4: autogenerate
+# alembic revision --autogenerate -m "add bio column"
+
+# Ex 5: downgrade
+# def downgrade(): op.drop_column('users', 'bio')
+
+# Ex 6: create index
+# op.create_index('idx_user_email', 'users', ['email'], unique=True)
+
+# Ex 7: batch alter table
+# with op.batch_alter_table('users') as batch_op: batch_op.alter_column('email', type_=sa.String(300))
+
+# Ex 8: merge heads
+# alembic merge -m "merge revisions" rev_a rev_b
+
+# Ex 9: Expand and Contract pattern
+# Phase 1: op.add_column('users', sa.Column('new_col', sa.String, nullable=True))
+```
 </details>

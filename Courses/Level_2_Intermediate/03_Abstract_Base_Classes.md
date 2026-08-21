@@ -101,10 +101,72 @@ print(cache.get("session_101")) # "user_authenticated"
 
 ---
 
-## 4. Nominal ABCs vs. Structural Protocols (`typing.Protocol`)
+---
 
-- **ABCs (Nominal Subtyping)**: Classes must explicitly declare inheritance from `ABC` (`class S3Adapter(BaseAdapter):`).
-- **Protocols (Structural / Duck Typing)**: Any class that implements the matching method signatures automatically satisfies the protocol without inheriting from a common base.
+## 4. Under the Hood: `ABCMeta` & `__abstractmethods__`
+
+When you inherit from `ABC` (which uses metaclass `abc.ABCMeta`), Python inspects the class definition at load time and populates a special frozenset: `__abstractmethods__`.
+
+```
+class Base(ABC):
+  @abstractmethod def run(self): pass ──► Base.__abstractmethods__ = {'run'}
+
+class Child(Base):
+  pass ──► Child.__abstractmethods__ = {'run'} ──► Instantiation BLOCKED with TypeError!
+
+class CompletedChild(Base):
+  def run(self): pass ──► CompletedChild.__abstractmethods__ = set() ──► Instantiation ALLOWED!
+```
+
+### ⚡ Virtual Subclasses via `.register()`
+You can register external classes as "virtual subclasses" of an ABC without changing their inheritance tree:
+
+```python
+from abc import ABC, abstractmethod
+
+class BaseReader(ABC):
+    @abstractmethod
+    def read_payload(self) -> bytes: pass
+
+class ThirdPartyBlobStream:
+    def read_payload(self) -> bytes:
+        return b"blob_data"
+
+# Register ThirdPartyBlobStream as a virtual subclass of BaseReader:
+BaseReader.register(ThirdPartyBlobStream)
+
+stream = ThirdPartyBlobStream()
+print(isinstance(stream, BaseReader)) # True!
+print(issubclass(ThirdPartyBlobStream, BaseReader)) # True!
+```
+
+---
+
+## 5. Structural Typing with `@runtime_checkable` Protocols
+
+While ABCs use **Nominal Typing** (explicit inheritance), `typing.Protocol` enables **Structural Typing (Duck Typing)** verified at runtime:
+
+```python
+from typing import Protocol, runtime_checkable
+
+@runtime_checkable
+class Closable(Protocol):
+    def close(self) -> None:
+        """Any class with a close() method matches this protocol!"""
+        ...
+
+class NetworkSocket:
+    def close(self) -> None:
+        print("Socket closed.")
+
+class DatabasePool:
+    def close(self) -> None:
+        print("Pool closed.")
+
+# Neither class inherits from Closable, but both satisfy the structural protocol:
+sock = NetworkSocket()
+print(isinstance(sock, Closable)) # True!
+```
 
 ---
 
@@ -278,6 +340,63 @@ engine.broadcast_critical_incident(contacts, "CRITICAL: Database primary replica
 
 ---
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master Abstract Base Classes, abstract methods, abstract properties, ABCMeta, virtual subclasses, and Protocols:
+
+---
+
+### 🟢 Tier 1: ABC Contracts & Instantiation Guards (Exercises 1–3)
+
+#### 🔹 Exercise 1: Base Shape ABC & Contract Enforcement
+* **Goal**: Define `class BaseShape(ABC)` with `@abstractmethod def area(self) -> float`.
+* **Requirement**: Show that instantiating `BaseShape()` raises `TypeError`. Implement `Square(side)` to satisfy contract.
+
+#### 🔹 Exercise 2: Abstract Property Requirement
+* **Goal**: Define `class CloudClient(ABC)` with `@property @abstractmethod def provider_name(self) -> str`.
+* **Requirement**: Subclass `AWSClient` and verify `provider_name` works as a property.
+
+#### 🔹 Exercise 3: File Parser Interface
+* **Goal**: Define `class BaseFileParser(ABC)` with `@abstractmethod def parse(self, raw_data: str) -> list[dict]`.
+* **Requirement**: Implement `CSVFileParser` and test parsing a comma-separated string.
+
+---
+
+### 🟡 Tier 2: Template Method Pattern & Multi-Method Contracts (Exercises 4–6)
+
+#### 🔹 Exercise 4: Data Pipeline Template Method
+* **Goal**: In `BaseETL(ABC)`, implement concrete method `run_pipeline()` that calls abstract methods `extract()`, `transform(data)`, and `load(data)` in order.
+
+#### 🔹 Exercise 5: Cache Engine Lifecycle Contract
+* **Goal**: Define `class CacheEngine(ABC)` with `get(k)`, `set(k, v, ttl)`, and `clear()`. Implement `InMemoryCache`.
+
+#### 🔹 Exercise 6: Payment Gateway Refund Interface
+* **Goal**: Define `class BasePaymentGateway(ABC)` with `charge(amt)` and `refund(txn_id, amt)`. Subclass `StripeGateway`.
+
+---
+
+### 🟠 Tier 3: Virtual Subclasses & Protocols (Exercises 7–9)
+
+#### 🔹 Exercise 7: Virtual Subclass Registration (`.register()`)
+* **Goal**: Define `class Streamable(ABC)` with abstract `stream_bytes()`.
+* **Requirement**: Take a third-party class `ExternalAudioStream` and register it with `Streamable.register(ExternalAudioStream)`. Verify `isinstance()` returns `True`.
+
+#### 🔹 Exercise 8: Structural Duck Typing with `@runtime_checkable` Protocol
+* **Goal**: Define `@runtime_checkable class Serializable(Protocol)` with `serialize() -> bytes`.
+* **Requirement**: Create two unrelated classes that implement `serialize()`, and verify `isinstance(obj, Serializable)` evaluates to `True`.
+
+#### 🔹 Exercise 9: Pluggable Serialization Dispatcher
+* **Goal**: Build a registry system accepting any `BaseSerializer(ABC)` (e.g. `JSONSerializer`, `XMLSerializer`) and dynamically selecting the correct serializer based on MIME type.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Multi-Database Storage Engine Adapter Interface
+* **Goal**: Build an abstract persistence layer (`BaseStorageAdapter`) with relational SQL and in-memory key-value adapters satisfying complete contract lifecycles.
+
+---
+
 ## 📝 Quick Exercise: Multi-Database Storage Engine Adapter Interface
 
 ### 🏢 Real-Life Scenario
@@ -324,12 +443,14 @@ ADAPTER OPERATIONS TEST:
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Storage Adapters & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Multi-Database Storage Engine Adapters
+# =====================================================================
 from abc import ABC, abstractmethod
 
-# 1. Abstract Base Class Interface (Level 2)
 class BaseStorageAdapter(ABC):
     def __init__(self, connection_string: str):
         self.connection_string = connection_string
@@ -357,7 +478,6 @@ class BaseStorageAdapter(ABC):
         pass
 
 
-# 2. PostgreSQL Concrete Adapter (Level 2)
 class PostgresStorageAdapter(BaseStorageAdapter):
     def __init__(self, connection_string: str):
         super().__init__(connection_string)
@@ -380,13 +500,9 @@ class PostgresStorageAdapter(BaseStorageAdapter):
         return self._table.get(record_id)
 
     def delete_record(self, record_id: str) -> bool:
-        if record_id in self._table:
-            del self._table[record_id]
-            return True
-        return False
+        return self._table.pop(record_id, None) is not None
 
 
-# 3. Redis Concrete Adapter (Level 2)
 class RedisStorageAdapter(BaseStorageAdapter):
     def __init__(self, connection_string: str):
         super().__init__(connection_string)
@@ -412,7 +528,6 @@ class RedisStorageAdapter(BaseStorageAdapter):
         return self._cache.pop(record_id, None) is not None
 
 
-# 4. Verification and Execution
 pg_adapter = PostgresStorageAdapter("postgresql://user:pass@localhost:5432/appdb")
 redis_adapter = RedisStorageAdapter("redis://localhost:6379/0")
 
@@ -424,21 +539,100 @@ redis_adapter.connect()
 print("--------------------------------------------------")
 print("ADAPTER OPERATIONS TEST:")
 
-# Test Postgres
 pg_adapter.save_record("USR-101", {"username": "erostova", "role": "admin"})
 pg_rec = pg_adapter.fetch_record("USR-101")
 print(f"  ✓ [{pg_adapter.engine_type}]: Saved record 'USR-101'")
 print(f"  ✓ [{pg_adapter.engine_type}]: Fetched record: {pg_rec}")
 
-# Test Redis
 redis_adapter.save_record("SESSION-909", {"token": "jwt_secret_xyz"})
 rd_rec = redis_adapter.fetch_record("SESSION-909")
 print(f"  ✓ [{redis_adapter.engine_type}]: Saved record 'SESSION-909'")
 print(f"  ✓ [{redis_adapter.engine_type}]: Fetched record: {rd_rec}")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `BaseStorageAdapter` defines the abstract interface that all persistence plugins must follow.
-- Subclasses implement the full lifecycle (`connect`, `save_record`, `fetch_record`, `delete_record`) and abstract property `engine_type`.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+class BaseShape(ABC):
+    @abstractmethod
+    def area(self) -> float: pass
+class Square(BaseShape):
+    def __init__(self, s: float): self.s = s
+    def area(self): return self.s ** 2
+
+# Ex 2:
+class CloudClient(ABC):
+    @property
+    @abstractmethod
+    def provider_name(self) -> str: pass
+class AWSClient(CloudClient):
+    @property
+    def provider_name(self): return "Amazon Web Services"
+
+# Ex 3:
+class BaseFileParser(ABC):
+    @abstractmethod
+    def parse(self, raw: str) -> list[dict]: pass
+class CSVFileParser(BaseFileParser):
+    def parse(self, raw): return [{"val": line} for line in raw.strip().split("\n")]
+
+# Ex 4:
+class BaseETL(ABC):
+    @abstractmethod
+    def extract(self): pass
+    @abstractmethod
+    def transform(self, d): pass
+    @abstractmethod
+    def load(self, d): pass
+    def run_pipeline(self):
+        d = self.extract()
+        t = self.transform(d)
+        return self.load(t)
+
+# Ex 5:
+class CacheEngine(ABC):
+    @abstractmethod
+    def get(self, k): pass
+    @abstractmethod
+    def set(self, k, v, ttl=0): pass
+    @abstractmethod
+    def clear(self): pass
+class InMemoryCache(CacheEngine):
+    def __init__(self): self.d = {}
+    def get(self, k): return self.d.get(k)
+    def set(self, k, v, ttl=0): self.d[k] = v
+    def clear(self): self.d.clear()
+
+# Ex 6:
+class BasePaymentGateway(ABC):
+    @abstractmethod
+    def charge(self, amt: float) -> bool: pass
+    @abstractmethod
+    def refund(self, txn_id: str, amt: float) -> bool: pass
+
+# Ex 7:
+class Streamable(ABC):
+    @abstractmethod
+    def stream_bytes(self) -> bytes: pass
+class ExternalAudioStream:
+    def stream_bytes(self): return b"\x00\x01"
+Streamable.register(ExternalAudioStream)
+
+# Ex 8:
+from typing import Protocol, runtime_checkable
+@runtime_checkable
+class Serializable(Protocol):
+    def serialize(self) -> bytes: ...
+class XMLDoc:
+    def serialize(self): return b"<xml></xml>"
+class JSONDoc:
+    def serialize(self): return b"{}"
+
+# Ex 9:
+class BaseSerializer(ABC):
+    @abstractmethod
+    def dump(self, obj) -> str: pass
+```
 </details>
+

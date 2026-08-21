@@ -39,76 +39,216 @@ print(calculate_tax(100.0, 0.15))    # 15.0 (overrides default)
 
 ---
 
-## 2. The Mutable Default Argument Trap
+## 2. Passing Lists & Mutable Objects (Pass-by-Object-Reference)
+
+In Python, arguments are passed using **pass-by-object-reference** (also known as *call-by-sharing*). Understanding how functions handle mutable objects (like `list`, `dict`, `set`) versus immutable objects (like `int`, `float`, `str`, `tuple`) is essential to avoiding critical software bugs.
+
+### 🧠 The Python Object Reference Model
+
+When you pass a variable into a function, Python passes a **reference (pointer) to the existing memory object**, not a disconnected duplicate copy.
+
+```
+Caller's Variable [ fruits ] ────┐
+                                 ▼
+                      [ Memory Object: 0x7FA1B0 ]
+                      [ "Apple", "Banana" ]
+                                 ▲
+Function Parameter [ items ] ────┘
+```
+
+#### Mutating in Place vs. Local Reassignment
+
+```python
+# --- Scenario A: In-Place Modification (Affects Caller) ---
+def mutate_list(items: list[str]) -> None:
+    # .append() modifies the existing object at memory address 0x7FA1B0
+    items.append("Cherry")
+
+basket = ["Apple", "Banana"]
+mutate_list(basket)
+print(basket) # Output: ['Apple', 'Banana', 'Cherry'] (Caller's list WAS modified!)
+
+
+# --- Scenario B: Local Reassignment (Does NOT Affect Caller) ---
+def reassign_list(items: list[str]) -> None:
+    # '=' creates a BRAND NEW local list at a new address; severs connection!
+    items = ["Orange", "Mango"]
+
+basket = ["Apple", "Banana"]
+reassign_list(basket)
+print(basket) # Output: ['Apple', 'Banana'] (Caller's list is UNTOUCHED!)
+```
+
+---
+
+### 🛡️ Pure Functions vs. Side Effects
+
+In professional software engineering, functions should generally avoid unexpected "side effects" (unintentionally mutating data passed from external components).
+
+| Pattern | Definition | Pros & Cons | Example |
+| :--- | :--- | :--- | :--- |
+| **Pure Function** | Returns a **new** value without modifying input arguments. Given identical inputs, always returns identical outputs. | ✅ Highly testable, predictable, safe in concurrent systems.<br>❌ Small memory overhead for new objects. | `def double_all(nums): return [n*2 for n in nums]` |
+| **Impure / In-Place Mutation** | Modifies the input argument directly in memory. | ✅ Zero memory allocation overhead (fast for huge datasets).<br>❌ Can introduce subtle bugs across callers. | `def double_all_inplace(nums): nums[0] *= 2` |
+
+#### Defensive Copying Pattern
+If your function must modify a list internally without impacting the caller's original data, make an explicit **defensive copy**:
+
+```python
+def remove_outliers_safely(scores: list[float]) -> list[float]:
+    """Cleans data by creating an isolated working copy."""
+    clean_copy = scores.copy()  # or scores[:] (Shallow copy)
+    if clean_copy:
+        clean_copy.remove(max(clean_copy))
+        clean_copy.remove(min(clean_copy))
+    return clean_copy
+
+raw_metrics = [12.0, 95.0, 4.0, 88.0, 52.0]
+filtered = remove_outliers_safely(raw_metrics)
+
+print("Original:", raw_metrics) # [12.0, 95.0, 4.0, 88.0, 52.0] (Safely preserved!)
+print("Filtered:", filtered)    # [12.0, 88.0, 52.0]
+```
+
+#### Safe Guard Clauses for Empty Sequences
+Never assume a list contains items. Always write guard clauses to protect against `IndexError` or `ZeroDivisionError`:
+
+```python
+def compute_class_average(grades: list[float]) -> float:
+    # Guard clause: An empty list [] evaluates to False in boolean context
+    if not grades:
+        return 0.0
+    return round(sum(grades) / len(grades), 2)
+```
+
+---
+
+## 3. The Mutable Default Argument Trap
 
 > [!CAUTION]
 > **Never use a mutable object (`list`, `dict`, `set`) as a default parameter value!**
-> In Python, default parameter objects are evaluated **once when the function is defined**, not every time it is called.
+> In Python, default parameter expressions are evaluated **once when the function definition is executed at module load time**, NOT on each individual function call.
 
 ```python
-# ❌ INCORRECT: All callers share the SAME list in memory!
+# ❌ DANGEROUS ANTI-PATTERN: All callers share the exact SAME list object in memory!
 def add_user_bad(username: str, user_list: list = []):
     user_list.append(username)
     return user_list
 
 print(add_user_bad("Alice")) # ['Alice']
-print(add_user_bad("Bob"))   # ['Alice', 'Bob'] (Accidentally shared state!)
+print(add_user_bad("Bob"))   # ['Alice', 'Bob'] (Accidentally shared across independent callers!)
+print(add_user_bad("Charlie")) # ['Alice', 'Bob', 'Charlie']
 
-# ✅ CORRECT: Use None as default and initialize inside:
-def add_user_good(username: str, user_list: list = None):
+# ✅ INDUSTRY-STANDARD PATTERN: Use None as default and instantiate internally:
+def add_user_good(username: str, user_list: list = None) -> list:
     if user_list is None:
-        user_list = []
+        user_list = [] # Fresh list created every call
     user_list.append(username)
     return user_list
 
 print(add_user_good("Alice")) # ['Alice']
-print(add_user_good("Bob"))   # ['Bob'] (Isolated clean lists!)
+print(add_user_good("Bob"))   # ['Bob'] (Isolated clean instance!)
 ```
 
 ---
 
-## 3. Flexible Arguments: `*args` and `**kwargs`
+## 4. Flexible Arguments: `*args` and `**kwargs`
 
-- **`*args`**: Captures any number of positional arguments into a `tuple`.
-- **`**kwargs`**: Captures any number of named/keyword arguments into a `dict`.
+Python provides special syntax to accept variable numbers of arguments:
+
+- **`*args`**: Packs arbitrary extra **positional arguments** into a **`tuple`**.
+- **`**kwargs`**: Packs arbitrary extra **keyword arguments** into a **`dict`**.
 
 ```python
-def log_telemetry_event(event_name: str, *tags: str, **metadata: any) -> None:
-    print(f"EVENT: {event_name}")
-    print(f"  Tags: {tags}")
-    print(f"  Metadata Attributes:")
-    for key, value in metadata.items():
-        print(f"    - {key}: {value}")
+def configure_cluster_node(node_id: str, *ip_aliases: str, **system_flags: any) -> None:
+    """Configures a server node with arbitrary IP aliases and runtime flags."""
+    print(f"Configuring Node [{node_id}] (Type of args: {type(ip_aliases).__name__})")
+    for ip in ip_aliases:
+        print(f"  - Binding Alias IP: {ip}")
+        
+    print(f"Flags Applied (Type of kwargs: {type(system_flags).__name__}):")
+    for key, value in system_flags.items():
+        print(f"  - {key} = {value}")
 
-# Invoking with arbitrary arguments:
-log_telemetry_event(
-    "USER_LOGIN", 
-    "security", "audit", "prod-auth", # *args
-    ip="192.168.1.10", region="us-west", latency_ms=42.5 # **kwargs
+# Invoking with mixed positional, variable positional, and variable keyword arguments:
+configure_cluster_node(
+    "NODE-US-EAST-01",
+    "10.0.0.15", "10.0.0.16", "172.16.4.1",     # *args (packed into a tuple)
+    region="us-east-1", ssl_enabled=True, timeout=30 # **kwargs (packed into a dict)
 )
 ```
 
----
-
-## 4. Variable Scope & The LEGB Rule
-
-Python searches for variable names in four cascading scopes (**LEGB**):
-
-1. **L**ocal: Inside the currently executing function.
-2. **E**nclosing: Inside any enclosing/nested outer functions.
-3. **G**lobal: At the top level of the current module file.
-4. **B**uilt-in: Python's built-in namespace (`print`, `len`, `int`, `range`).
+### Argument Unpacking in Function Calls
+You can also use `*` and `**` in reverse to **unpack** collections into function arguments:
 
 ```python
-system_mode = "PRODUCTION" # Global variable
+def calculate_box_volume(length: float, width: float, height: float) -> float:
+    return length * width * height
 
-def execute_operation():
-    local_worker_id = "WRK-99" # Local variable
-    print(f"Executing in {system_mode} by {local_worker_id}")
+# Unpacking a list/tuple with *
+dimensions = [10.0, 5.0, 2.0]
+print(calculate_box_volume(*dimensions)) # 100.0 (Unpacks elements into positional args)
 
-execute_operation()
-# print(local_worker_id) # ❌ NameError: 'local_worker_id' is not accessible in global scope!
+# Unpacking a dict with **
+box_dict = {"length": 12.0, "width": 4.0, "height": 3.0}
+print(calculate_box_volume(**box_dict))   # 144.0 (Unpacks keys as keyword args)
 ```
+
+---
+
+## 5. Variable Scope & The LEGB Rule
+
+Scope determines where a variable can be read or modified in a Python script. Python resolves identifiers using the **LEGB hierarchy**:
+
+```
+┌────────────────────────────────────────────────────────┐
+│ 1. Local (L)        Inside currently running function  │
+│    ▲                                                   │
+│ 2. Enclosing (E)    Inside nested/outer functions      │
+│    ▲                                                   │
+│ 3. Global (G)       Top level of module/file           │
+│    ▲                                                   │
+│ 4. Built-in (B)     Python built-ins (len, sum, range) │
+└────────────────────────────────────────────────────────┘
+```
+
+```python
+# Built-in scope: 'len', 'print', 'max' live in Python builtins
+global_threshold = 100 # Global Scope
+
+def outer_controller():
+    controller_id = "CTRL-A" # Enclosing Scope for inner_worker()
+    
+    def inner_worker():
+        task_id = "TSK-001" # Local Scope
+        # Can read Local (task_id), Enclosing (controller_id), Global (global_threshold), Built-in (len)
+        print(f"[{controller_id}] Running {task_id} under limit {global_threshold}")
+    
+    inner_worker()
+
+outer_controller()
+```
+
+### Modifying Scopes: `global` vs. `nonlocal`
+
+By default, assigning a variable inside a function creates a **new local variable** that shadows (hides) variables in outer scopes.
+
+```python
+counter = 0
+
+def increment_bad():
+    # counter = counter + 1 # ❌ UnboundLocalError: local variable referenced before assignment
+    pass
+
+def increment_global():
+    global counter # Explicitly allows modifying the module-level variable
+    counter += 1
+
+increment_global()
+print("Global Counter:", counter) # 1
+```
+
+> [!TIP]
+> **Production Best Practice**: Minimize or avoid using the `global` keyword in production systems. Global mutable state introduces hidden coupling and makes unit testing difficult. Prefer passing arguments and returning new values explicitly.
 
 ---
 
@@ -213,6 +353,124 @@ print_loan_schedule(applicant_loan)
 
 ---
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+To build true mastery from basic function design to multi-stage modular system architecture, work through these 10 progressive challenges:
+
+---
+
+### 🟢 Tier 1: Fundamentals (Exercises 1–3)
+
+#### 🔹 Exercise 1: Temperature Unit Converter (Pure Return)
+* **Goal**: Write a function `celsius_to_fahrenheit(celsius: float) -> float`.
+* **Formula**: `(celsius * 9/5) + 32`.
+* **Requirement**: Return the result rounded to 2 decimal places (do not print inside the function).
+* **Test**: `celsius_to_fahrenheit(25.0)` $\rightarrow$ `77.0`
+
+#### 🔹 Exercise 2: Bill Splitter with Default Tip (Default Arguments)
+* **Goal**: Write a function `split_bill(total_amount: float, num_people: int, tip_percentage: float = 0.15) -> float`.
+* **Calculation**: Add the tip to `total_amount`, then divide evenly among `num_people`.
+* **Requirement**: Return the per-person amount rounded to 2 decimal places.
+* **Test**:
+  - `split_bill(100.0, 4)` $\rightarrow$ `28.75` (uses default 15% tip)
+  - `split_bill(100.0, 4, tip_percentage=0.20)` $\rightarrow$ `30.0`
+
+#### 🔹 Exercise 3: Security Password Policy Validator (Boolean Logic & Early Returns)
+* **Goal**: Write a function `is_strong_password(password: str) -> bool`.
+* **Rules**: Must be at least 8 characters long, contain at least one uppercase letter, at least one lowercase letter, and at least one digit.
+* **Requirement**: Use early returns (`return False` immediately when a rule fails, otherwise `return True`).
+* **Test**:
+  - `is_strong_password("Pass1234")` $\rightarrow$ `True`
+  - `is_strong_password("weakpass")` $\rightarrow$ `False`
+
+---
+
+### 🟡 Tier 2: Intermediate Data Processing (Exercises 4–6)
+
+#### 🔹 Exercise 4: Dataset Summary Statistics (Multiple Return Values)
+* **Goal**: Write a function `calculate_statistics(numbers: list[float]) -> tuple[float, float, float]`.
+* **Requirement**: Return `(minimum, maximum, average)` from the list. If the list is empty, return `(0.0, 0.0, 0.0)`.
+* **Test**:
+  - `low, high, avg = calculate_statistics([10.0, 20.0, 30.0, 40.0])`
+  - `print(low, high, avg)` $\rightarrow$ `10.0, 40.0, 25.0`
+
+#### 🔹 Exercise 5: Clean Task Manager (Avoiding Mutable Default Trap)
+* **Goal**: Write a function `add_task(task_name: str, priority: str = "Normal", task_list: list = None) -> list`.
+* **Trap to Avoid**: Do **NOT** use `task_list: list = []` in the header. Use `None` as default and initialize a fresh list inside if omitted.
+* **Requirement**: Append a dictionary `{"task": task_name, "priority": priority}` to the list and return it.
+* **Test**:
+  - `list_a = add_task("Buy groceries")`
+  - `list_b = add_task("Fix bug", priority="High")`
+  - Ensure `list_a` and `list_b` are separate lists and do not share items!
+
+#### 🔹 Exercise 6: Text Sanitizer & Word Counter (Docstrings & Modular Helpers)
+* **Goal**: Write two functions:
+  1. `clean_text(raw_text: str) -> str`: Converts to lowercase and removes punctuation (`.`, `,`, `!`, `?`).
+  2. `word_frequency(text: str) -> dict[str, int]`: Uses `clean_text` internally, splits into words, and returns a tally dictionary.
+* **Test**: `word_frequency("Hello, world! Hello Python?")` $\rightarrow$ `{"hello": 2, "world": 1, "python": 1}`
+
+---
+
+### 🟠 Tier 3: Advanced Function Signatures (Exercises 7–9)
+
+#### 🔹 Exercise 7: Math Vector Aggregator (`*args`)
+* **Goal**: Write a function `custom_aggregate(operation: str, *values: float) -> float`.
+* **Operations supported**:
+  - `"sum"`: Returns the sum of all numbers.
+  - `"product"`: Returns the product (multiplication) of all numbers.
+  - `"mean"`: Returns the average.
+  - Any other operation: Return `0.0`.
+* **Requirement**: If no numbers are passed in `*values`, return `0.0`.
+* **Test**:
+  - `custom_aggregate("sum", 2, 4, 6)` $\rightarrow$ `12.0`
+  - `custom_aggregate("product", 2, 3, 4)` $\rightarrow$ `24.0`
+
+#### 🔹 Exercise 8: User Profile Generator (`**kwargs`)
+* **Goal**: Write a function `build_user_profile(username: str, email: str, **attributes) -> dict`.
+* **Requirement**: Construct a dictionary containing `"username"`, `"email"`, and merge all arbitrary attributes passed in `**attributes`. Also add a key `"is_active": True` by default if not explicitly provided in `**attributes`.
+* **Test**:
+  - `build_user_profile("alice", "alice@example.com", role="Admin", department="Security")`
+  - Output: `{"username": "alice", "email": "alice@example.com", "is_active": True, "role": "Admin", "department": "Security"}`
+
+#### 🔹 Exercise 9: Universal Structured Logger (`*args` + `**kwargs` + Scope)
+* **Goal**: Write a function `log_event(level: str, message: str, *tags: str, **context) -> str`.
+* **Format**: Return a single formatted string:
+  `"[{LEVEL}] {message} | Tags: <comma_separated_tags> | Context: <key=value, key=value>"`
+  - If no tags are provided, show `"Tags: None"`.
+  - If no context is provided, show `"Context: None"`.
+* **Test**:
+  `log_event("WARNING", "High CPU load", "infra", "compute", host="srv-01", cpu_pct=92.5)`
+  - Output: `"[WARNING] High CPU load | Tags: infra, compute | Context: host=srv-01, cpu_pct=92.5"`
+
+---
+
+### 🟣 Tier 4: Senior Architecture & Pipeline (Exercise 10)
+
+#### 🔹 Exercise 10: E-Commerce Checkout Pipeline (Modular System Design)
+Build a complete modular checkout processing system using 4 coordinated functions:
+
+1. **`calculate_subtotal(cart: list[dict]) -> float`**:
+   - Each item in `cart` is `{"name": str, "price": float, "qty": int}`. Returns total pre-tax price.
+2. **`apply_coupon(subtotal: float, coupon_code: str = None) -> float`**:
+   - `"SAVE10"`: 10% discount.
+   - `"SAVE20"`: 20% discount.
+   - `"FLAT50"`: $50 off (minimum subtotal must be $\ge \$100$, cannot make subtotal negative).
+   - If coupon is invalid or `None`, return `subtotal` unchanged.
+3. **`calculate_shipping(subtotal: float, is_express: bool = False, is_international: bool = False) -> float`**:
+   - Base shipping: `$10.00` (Free if `subtotal >= 100.0`).
+   - Add `$15.00` if `is_express`.
+   - Add `$25.00` if `is_international`.
+4. **`process_order(customer_name: str, cart: list[dict], coupon: str = None, **shipping_options) -> dict`**:
+   - Calls the 3 functions above, calculates tax (8% on discounted subtotal), and returns an order summary dictionary containing:
+     - `customer`: `customer_name`
+     - `subtotal`: float
+     - `discounted_subtotal`: float
+     - `shipping_cost`: float
+     - `tax`: float
+     - `total`: float (discounted subtotal + shipping + tax, rounded to 2 decimals)
+
+---
+
 ## 📝 Quick Exercise: Cloud VM Instance Pricing & Quota Management Utility
 
 ### 🏢 Real-Life Scenario
@@ -260,12 +518,13 @@ TOTAL ESTIMATED FLEET COST: $340.56
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (VM Utility & 10 Challenges)</b></summary>
 
 ```python
-# 1. Modular Functions (Lessons 1-8)
+# =====================================================================
+# SOLUTION: Cloud VM Fleet Estimator
+# =====================================================================
 def calculate_instance_cost(instance_type: str, hours: float, is_spot_instance: bool = False) -> float:
-    """Calculates VM run cost based on instance type and spot pricing."""
     rates = {
         "t3.micro": 0.0104,
         "t3.medium": 0.0416,
@@ -283,7 +542,6 @@ def verify_quota_limits(
     max_cores: int = 64, 
     max_ram_gb: float = 256.0
 ) -> tuple[bool, str]:
-    """Verifies that requested computing capacity is within organizational limits."""
     if requested_cores > max_cores:
         return False, f"Exceeded CPU quota limit of {max_cores} cores"
     if requested_ram_gb > max_ram_gb:
@@ -296,7 +554,6 @@ def generate_fleet_report(
     max_cores: int = 64,
     max_ram_gb: float = 256.0
 ) -> None:
-    """Aggregates and displays cloud fleet deployment telemetry."""
     total_cores = sum(inst["cores"] for inst in instances)
     total_ram = sum(inst["ram_gb"] for inst in instances)
     
@@ -326,18 +583,125 @@ def generate_fleet_report(
     print(f"TOTAL ESTIMATED FLEET COST: ${total_cost:,.2f}")
     print("==================================================")
 
-# 2. Execution Run
-fleet = [
-    {"type": "c5.xlarge", "cores": 4, "ram_gb": 16.0, "hours": 720.0, "spot": False},
-    {"type": "c5.xlarge", "cores": 4, "ram_gb": 16.0, "hours": 720.0, "spot": True},
-    {"type": "r5.2xlarge", "cores": 16, "ram_gb": 64.0, "hours": 360.0, "spot": False},
-]
+# =====================================================================
+# SOLUTION: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+def celsius_to_fahrenheit(celsius: float) -> float:
+    return round((celsius * 9/5) + 32, 2)
 
-generate_fleet_report("Data Science AI Lab", fleet)
+# Ex 2:
+def split_bill(total_amount: float, num_people: int, tip_percentage: float = 0.15) -> float:
+    total = total_amount * (1 + tip_percentage)
+    return round(total / num_people, 2)
+
+# Ex 3:
+def is_strong_password(password: str) -> bool:
+    if len(password) < 8:
+        return False
+    if not any(c.isupper() for c in password):
+        return False
+    if not any(c.islower() for c in password):
+        return False
+    if not any(c.isdigit() for c in password):
+        return False
+    return True
+
+# Ex 4:
+def calculate_statistics(numbers: list[float]) -> tuple[float, float, float]:
+    if not numbers:
+        return (0.0, 0.0, 0.0)
+    return (min(numbers), max(numbers), sum(numbers) / len(numbers))
+
+# Ex 5:
+def add_task(task_name: str, priority: str = "Normal", task_list: list = None) -> list:
+    if task_list is None:
+        task_list = []
+    task_list.append({"task": task_name, "priority": priority})
+    return task_list
+
+# Ex 6:
+def clean_text(raw_text: str) -> str:
+    cleaned = raw_text.lower()
+    for char in [".", ",", "!", "?"]:
+        cleaned = cleaned.replace(char, "")
+    return cleaned
+
+def word_frequency(text: str) -> dict[str, int]:
+    cleaned = clean_text(text)
+    words = cleaned.split()
+    tally = {}
+    for w in words:
+        tally[w] = tally.get(w, 0) + 1
+    return tally
+
+# Ex 7:
+def custom_aggregate(operation: str, *values: float) -> float:
+    if not values:
+        return 0.0
+    if operation == "sum":
+        return float(sum(values))
+    elif operation == "product":
+        prod = 1.0
+        for v in values:
+            prod *= v
+        return float(prod)
+    elif operation == "mean":
+        return float(sum(values) / len(values))
+    return 0.0
+
+# Ex 8:
+def build_user_profile(username: str, email: str, **attributes) -> dict:
+    profile = {
+        "username": username,
+        "email": email,
+        "is_active": attributes.pop("is_active", True)
+    }
+    profile.update(attributes)
+    return profile
+
+# Ex 9:
+def log_event(level: str, message: str, *tags: str, **context) -> str:
+    tag_str = ", ".join(tags) if tags else "None"
+    ctx_str = ", ".join(f"{k}={v}" for k, v in context.items()) if context else "None"
+    return f"[{level}] {message} | Tags: {tag_str} | Context: {ctx_str}"
+
+# Ex 10:
+def calculate_subtotal(cart: list[dict]) -> float:
+    return sum(item["price"] * item["qty"] for item in cart)
+
+def apply_coupon(subtotal: float, coupon_code: str = None) -> float:
+    if not coupon_code:
+        return subtotal
+    if coupon_code == "SAVE10":
+        return subtotal * 0.90
+    elif coupon_code == "SAVE20":
+        return subtotal * 0.80
+    elif coupon_code == "FLAT50" and subtotal >= 100.0:
+        return max(0.0, subtotal - 50.0)
+    return subtotal
+
+def calculate_shipping(subtotal: float, is_express: bool = False, is_international: bool = False) -> float:
+    shipping = 0.0 if subtotal >= 100.0 else 10.00
+    if is_express:
+        shipping += 15.00
+    if is_international:
+        shipping += 25.00
+    return shipping
+
+def process_order(customer_name: str, cart: list[dict], coupon: str = None, **shipping_options) -> dict:
+    subtotal = calculate_subtotal(cart)
+    discounted = apply_coupon(subtotal, coupon)
+    shipping = calculate_shipping(discounted, **shipping_options)
+    tax = discounted * 0.08
+    total = round(discounted + shipping + tax, 2)
+    return {
+        "customer": customer_name,
+        "subtotal": round(subtotal, 2),
+        "discounted_subtotal": round(discounted, 2),
+        "shipping_cost": round(shipping, 2),
+        "tax": round(tax, 2),
+        "total": total
+    }
 ```
-
-**Explanation of the Solution:**
-- `calculate_instance_cost` encapsulates pricing tables and spot discounts into a pure, testable function.
-- `verify_quota_limits` checks multi-dimensional hardware limits using default threshold values.
-- `generate_fleet_report` orchestrates dictionary aggregation, function calls, and formatted reporting.
 </details>

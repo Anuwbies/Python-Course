@@ -122,19 +122,92 @@ if total_count != 0 and (total_sum / total_count > 50):
 
 ---
 
-## 5. Operator Precedence (Order of Operations)
+## 5. Object Identity (`is`) vs. Value Equality (`==`)
+
+A critical distinction in Python is the difference between comparing **values** versus comparing **memory identities**:
+
+- **`==` (Value Equality)**: Calls the `__eq__()` method to check if two objects contain equivalent data/values.
+- **`is` (Identity Comparison)**: Checks if two variables point to the **exact same memory address** (`id(a) == id(b)`).
+
+```python
+list_a = [1, 2, 3]
+list_b = [1, 2, 3]
+list_c = list_a
+
+print(list_a == list_b) # True  (They have identical contents)
+print(list_a is list_b) # False (They are distinct objects in heap memory!)
+print(list_a is list_c) # True  (list_c references the exact same list)
+```
+
+> [!IMPORTANT]
+> **Always compare with `None` using `is`**:
+> Use `if val is None:` or `if val is not None:` instead of `== None`. `None` is a singleton in Python, and `is` is faster and cannot be overridden.
+
+---
+
+## 6. Bitwise Operators & Flag Masking
+
+Bitwise operators manipulate individual binary bits of integer numbers:
+
+| Operator | Name | Operation | Example (`a=5` (0101₂), `b=3` (0011₂)) | Result |
+| :---: | :--- | :--- | :--- | :--- |
+| `&` | Bitwise AND | Bit is `1` if both bits are `1` | `5 & 3` (0101 & 0011) | `1` (0001₂) |
+| `\|` | Bitwise OR | Bit is `1` if either bit is `1` | `5 \| 3` (0101 \| 0011) | `7` (0111₂) |
+| `^` | Bitwise XOR | Bit is `1` if bits are different | `5 ^ 3` (0101 ^ 0011) | `6` (0110₂) |
+| `~` | Bitwise NOT | Inverts all bits (`-x - 1`) | `~5` | `-6` |
+| `<<` | Left Shift | Shifts bits left (multiplies by $2^n$) | `5 << 1` | `10` (1010₂) |
+| `>>` | Right Shift | Shifts bits right (floor divides by $2^n$) | `5 >> 1` | `2` (0010₂) |
+
+```python
+# System Permission Bitmasking Example:
+READ_PERMISSION = 0b001   # 1
+WRITE_PERMISSION = 0b010  # 2
+EXEC_PERMISSION = 0b100   # 4
+
+# Combine permissions using Bitwise OR:
+user_perms = READ_PERMISSION | EXEC_PERMISSION # 0b101 (5)
+
+# Check permission using Bitwise AND:
+has_write = (user_perms & WRITE_PERMISSION) != 0 # False
+has_read = (user_perms & READ_PERMISSION) != 0   # True
+```
+
+---
+
+## 7. The Walrus Operator (`:=`) (Assignment Expressions)
+
+Introduced in Python 3.8, the **walrus operator (`:=`)** allows you to assign values to variables *within* an expression.
+
+```python
+# Standard two-step approach:
+val = input("Enter command: ").strip()
+if len(val) > 0:
+    print(f"Executing: {val}")
+
+# Walrus assignment expression:
+if (cmd := input("Enter command: ").strip()):
+    print(f"Executing: {cmd} (Length: {len(cmd)})")
+```
+
+---
+
+## 8. Operator Precedence (Order of Operations)
 
 When multiple operators appear in a single expression, Python evaluates them in strict precedence:
 
 1. **Parentheses**: `( )`
 2. **Exponentiation**: `**`
-3. **Unary Signs**: `+x`, `-x`
+3. **Bitwise NOT, Unary Signs**: `~x`, `+x`, `-x`
 4. **Multiplication, Division, Floor Div, Modulo**: `*`, `/`, `//`, `%`
 5. **Addition, Subtraction**: `+`, `-`
-6. **Comparisons**: `==`, `!=`, `<`, `>`, `<=`, `>=`
-7. **Logical NOT**: `not`
-8. **Logical AND**: `and`
-9. **Logical OR**: `or`
+6. **Bitwise Shifts**: `<<`, `>>`
+7. **Bitwise AND**: `&`
+8. **Bitwise XOR, OR**: `^`, `|`
+9. **Comparisons & Identity/Membership**: `==`, `!=`, `<`, `>`, `<=`, `>=`, `is`, `is not`, `in`, `not in`
+10. **Logical NOT**: `not`
+11. **Logical AND**: `and`
+12. **Logical OR**: `or`
+13. **Walrus Operator / Assignment**: `:=`, `=`
 
 ---
 
@@ -207,6 +280,69 @@ print("=" * 65)
 
 ---
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master arithmetic, boolean expressions, short-circuit evaluation, identity vs equality, bitwise logic, and the walrus operator:
+
+---
+
+### 🟢 Tier 1: Arithmetic & Augmented Assignment (Exercises 1–3)
+
+#### 🔹 Exercise 1: Even/Odd Modulo Detector
+* **Goal**: Prompt the user for an integer number.
+* **Requirement**: Use `% 2` to evaluate if the number is even (`is_even = (num % 2 == 0)`). Print `f"Is Even: {is_even}"`.
+
+#### 🔹 Exercise 2: Time Duration Decomposer
+* **Goal**: Given `total_seconds = 7384`.
+* **Calculation**: Use `//` and `%` to calculate hours, minutes, and remaining seconds.
+* **Requirement**: Print in `Xh Ym Zs` format.
+
+#### 🔹 Exercise 3: Augmented Score Tracker
+* **Goal**: Initialize `score = 100`.
+* **Operations**: Add 25, multiply by 2, subtract 50, and floor divide by 4 using augmented operators (`+=`, `*=`, `-=`, `//=`). Print final score.
+
+---
+
+### 🟡 Tier 2: Relational Logic & Short-Circuiting (Exercises 4–6)
+
+#### 🔹 Exercise 4: Loan Pre-Qualification Decision
+* **Goal**: Given `credit_score = 720`, `income = 65000.0`, `has_bankruptcies = False`.
+* **Rule**: Pre-approved if `credit_score >= 680` AND `income >= 50000` AND `not has_bankruptcies`.
+* **Requirement**: Print boolean result.
+
+#### 🔹 Exercise 5: Short-Circuit Safe Division Guard
+* **Goal**: Given `count = 0` and `total = 500`.
+* **Requirement**: Write a single boolean expression `is_valid_avg = (count > 0) and ((total / count) >= 50)`. Verify it evaluates to `False` without crashing with `ZeroDivisionError`.
+
+#### 🔹 Exercise 6: Chained Comparison Range Checker
+* **Goal**: Prompt for temperature reading in Celsius.
+* **Requirement**: Check if temperature is within operating range using chained comparison `18.0 <= temp <= 27.5`.
+
+---
+
+### 🟠 Tier 3: Memory Identity & Bitwise Operations (Exercises 7–9)
+
+#### 🔹 Exercise 7: Object Identity vs Equality Tester
+* **Goal**: Create two identical lists `list1 = [10, 20]` and `list2 = [10, 20]`.
+* **Requirement**: Print results of `list1 == list2` and `list1 is list2`. Rebind `list3 = list1` and test `list1 is list3`.
+
+#### 🔹 Exercise 8: Bitwise Permission Flag System
+* **Goal**: Define bitmask constants `ADMIN = 4`, `EDITOR = 2`, `VIEWER = 1`.
+* **Requirement**: Create a user with `user_role = EDITOR | VIEWER` (bitwise OR). Check if user has `ADMIN` permission using bitwise AND (`&`).
+
+#### 🔹 Exercise 9: Interactive Walrus Loop Validator
+* **Goal**: Prompt the user for input and simultaneously assign and check length using `:=`:
+  `if (msg := input("Enter message: ").strip()): print(f"Received: {msg}")`.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Cash Drawer Optimal Change Dispenser
+* **Goal**: Prompt for `total_due` and `cash_paid`. Perform exact integer cent conversion and decompose change into minimal bills, quarters, dimes, nickels, and pennies.
+
+---
+
 ## 📝 Quick Exercise: Point of Sale Coin Change Breakdown & Discount Matrix
 
 ### 🏢 Real-Life Scenario
@@ -265,19 +401,19 @@ OPTIMAL CHANGE DENOMINATIONS:
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Cash Drawer & 10 Challenges)</b></summary>
 
 ```python
-# 1. Inputs and Sanitization (Lessons 1 & 2)
+# =====================================================================
+# SOLUTION: Cash Drawer Dispenser
+# =====================================================================
 cashier_name = input("Enter Cashier Name: ").strip().title()
 total_due = float(input("Enter Total Due ($): "))
 cash_paid = float(input("Enter Cash Handed ($): "))
 
-# 2. Financial Arithmetic & Floor Division / Modulo (Lesson 3)
 change_due_dollars = cash_paid - total_due
 change_due_cents = int(round(change_due_dollars * 100))
 
-# Denomination breakdown
 dollars = change_due_cents // 100
 rem_cents_1 = change_due_cents % 100
 
@@ -290,10 +426,8 @@ rem_cents_3 = rem_cents_2 % 10
 nickels = rem_cents_3 // 5
 pennies = rem_cents_3 % 5
 
-# 3. Boolean Conditions (Lesson 3)
 needs_coin_change = (change_due_cents % 100) != 0
 
-# 4. Formatted Terminal Output (Lesson 1 f-strings)
 print("\n==================================================")
 print("              CASH DRAWER DISPENSER               ")
 print("==================================================")
@@ -311,9 +445,56 @@ print(f"  $0.10 Dimes:        {dimes}")
 print(f"  $0.05 Nickels:      {nickels}")
 print(f"  $0.01 Pennies:      {pennies}")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- Multiplying the dollar amount by 100 converts floating-point currency into an exact integer of cents, avoiding binary float rounding discrepancies.
-- Repeated floor division (`//`) extracts each denomination count, while modulo (`%`) retains the remainder for subsequent smaller coin calculations.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+num = int(input("Enter integer: "))
+print(f"Is Even: {num % 2 == 0}")
+
+# Ex 2:
+total_s = 7384
+h = total_s // 3600
+m = (total_s % 3600) // 60
+s = total_s % 60
+print(f"{h}h {m}m {s}s")
+
+# Ex 3:
+score = 100
+score += 25
+score *= 2
+score -= 50
+score //= 4
+print(f"Final Score: {score}")
+
+# Ex 4:
+credit_score, income, has_bankruptcies = 720, 65000.0, False
+approved = (credit_score >= 680) and (income >= 50000) and (not has_bankruptcies)
+print(f"Approved: {approved}")
+
+# Ex 5:
+count, total = 0, 500
+is_valid_avg = (count > 0) and ((total / count) >= 50)
+print(f"Valid Average: {is_valid_avg}")
+
+# Ex 6:
+temp = float(input("Temperature (°C): "))
+print(f"In Normal Range: {18.0 <= temp <= 27.5}")
+
+# Ex 7:
+l1, l2 = [10, 20], [10, 20]
+l3 = l1
+print(f"Equal Value: {l1 == l2}, Identical Object: {l1 is l2}, Aliased Object: {l1 is l3}")
+
+# Ex 8:
+ADMIN, EDITOR, VIEWER = 4, 2, 1
+user_perms = EDITOR | VIEWER
+has_admin = (user_perms & ADMIN) != 0
+print(f"User Permissions: {bin(user_perms)}, Has Admin: {has_admin}")
+
+# Ex 9:
+if (msg := input("Enter status code: ").strip()):
+    print(f"Captured: {msg}")
+```
 </details>

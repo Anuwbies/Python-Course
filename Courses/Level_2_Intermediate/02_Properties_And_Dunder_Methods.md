@@ -79,41 +79,89 @@ print(repr(coord)) # "GeographicCoordinate(latitude=37.7749, longitude=-122.4194
 
 ---
 
-## 3. Operator Overloading & Container Dunders
+---
 
-Special "dunder" (double underscore) methods allow custom classes to integrate with native Python operators and built-in functions:
+## 4. Under the Hood: The Descriptor Protocol
 
-| Dunder Method | Triggered By | Purpose |
-| :--- | :--- | :--- |
-| `__eq__(self, other)` | `a == b` | Equality comparison |
-| `__lt__(self, other)` | `a < b` | Less-than (enables `sorted()`) |
-| `__add__(self, other)` | `a + b` | Arithmetic addition |
-| `__len__(self)` | `len(obj)` | Number of elements in container |
-| `__getitem__(self, key)` | `obj[key]` | Index or key subscript lookup |
-| `__contains__(self, item)`| `item in obj` | Membership testing |
-| `__bool__(self)` | `bool(obj)`, `if obj:` | Truth value testing |
+Have you ever wondered how `@property` works internally? It is built on Python's **Descriptor Protocol**. A descriptor is an object attribute with "binding behavior" whose attribute access is overridden by methods in the descriptor protocol:
+- `__get__(self, instance, owner=None)`
+- `__set__(self, instance, value)`
+- `__delete__(self, instance)`
+
+When you access `obj.attribute`, if `attribute` defines `__get__`, Python executes that descriptor method instead of a standard dictionary lookup in `obj.__dict__`.
 
 ```python
-class SecurityCluster:
-    def __init__(self, cluster_id: str):
-        self.cluster_id = cluster_id
-        self._nodes = []
+class NonNegativeFloat:
+    """Reusable descriptor enforcing positive float constraints across any class."""
+    def __set_name__(self, owner, name):
+        self.private_name = f"_{name}"
 
-    def add_node(self, hostname: str) -> None:
-        self._nodes.append(hostname)
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return getattr(instance, self.private_name, 0.0)
 
-    def __len__(self) -> int:
-        return len(self._nodes)
+    def __set__(self, instance, value):
+        if float(value) < 0.0:
+            raise ValueError(f"Value cannot be negative: {value}")
+        setattr(instance, self.private_name, float(value))
 
-    def __getitem__(self, index: int) -> str:
-        return self._nodes[index]
+class ServerSpec:
+    cpu_ghz = NonNegativeFloat()
+    ram_gb = NonNegativeFloat()
 
-    def __contains__(self, hostname: str) -> bool:
-        return hostname in self._nodes
+    def __init__(self, cpu: float, ram: float):
+        self.cpu_ghz = cpu # Triggers NonNegativeFloat.__set__
+        self.ram_gb = ram
+```
 
-    def __bool__(self) -> bool:
-        # Truthy if at least one node is present
-        return len(self._nodes) > 0
+---
+
+## 5. Comparison Simplification with `@functools.total_ordering`
+
+Implementing all 6 comparison dunders (`__eq__`, `__ne__`, `__lt__`, `__le__`, `__gt__`, `__ge__`) is tedious. By decorating your class with `@total_ordering`, you only need to implement **`__eq__`** and **ONE of (`__lt__`, `__le__`, `__gt__`, `__ge__`)**—Python generates the rest automatically:
+
+```python
+from functools import total_ordering
+
+@total_ordering
+class TaskPriority:
+    def __init__(self, level: int, label: str):
+        self.level = level
+        self.label = label
+
+    def __eq__(self, other):
+        return isinstance(other, TaskPriority) and self.level == other.level
+
+    def __lt__(self, other):
+        return isinstance(other, TaskPriority) and self.level < other.level
+
+# Automatically supports <=, >, >=, !=, and sorted()!
+p1 = TaskPriority(1, "Low")
+p2 = TaskPriority(5, "Critical")
+print(p1 <= p2) # True
+```
+
+---
+
+## 6. Callable Objects (`__call__`)
+
+Implementing `__call__` allows an instance of a class to be invoked directly like a function while maintaining state across invocations:
+
+```python
+class RateLimiter:
+    def __init__(self, max_requests: int):
+        self.max_requests = max_requests
+        self.count = 0
+
+    def __call__(self, client_ip: str) -> bool:
+        self.count += 1
+        return self.count <= self.max_requests
+
+limiter = RateLimiter(max_requests=2)
+print(limiter("192.168.1.1")) # True (Request 1)
+print(limiter("192.168.1.1")) # True (Request 2)
+print(limiter("192.168.1.1")) # False (Exceeded!)
 ```
 
 ---
@@ -257,7 +305,6 @@ print("-" * 70)
 print(f"{'TOTAL NET ASSET VALUE (NAV):':<30} ${portfolio.total_nav:,.2f}")
 print("=" * 70)
 ```
-
 ### 🔍 Code Explanation:
 - **`@property` and `@setter`**: Protects share volume and stock price from invalid zero or negative inputs, while exposing clean attribute access (`h1.current_market_price = 185.50`).
 - **`__len__` & `__getitem__`**: Enables `len(portfolio)` to return the asset count and `portfolio["NVDA"]` or `portfolio[0]` to fetch positions intuitively.
@@ -266,166 +313,164 @@ print("=" * 70)
 
 ---
 
-## 📝 Quick Exercise: Multi-Currency Money & Digital Wallet Container Engine
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master properties, representation dunders, operator overloading, container protocols, descriptors, and callable objects:
+
+### 🟢 Tier 1: Property Getters, Setters & Dunders (Exercises 1–3)
+* **Exercise 1: Validated Bank Balance Property**: Class `Account` with `@property balance`. Setter raises `ValueError` if new balance is negative.
+* **Exercise 2: Developer vs User Dunder Representations**: Class `ServerNode(ip: str, port: int)`. Implement `__str__` returning `"<ip>:<port>"` and `__repr__` returning `"ServerNode(ip='...', port=...)"`.
+* **Exercise 3: Dynamic Read-Only Area Property**: Class `Circle` with mutable `radius`. Create read-only `@property area` calculating $\pi r^2$.
+
+### 🟡 Tier 2: Operator Overloading & Total Ordering (Exercises 4–6)
+* **Exercise 4: 2D Vector Addition & Scalar Multiplication**: Class `Vector2D(x, y)`. Implement `__add__(self, other)` and `__mul__(self, scalar)` returning a new `Vector2D`.
+* **Exercise 5: Total Ordering Severity Level**: Class `Severity(level: int)`. Use `@total_ordering` with `__eq__` and `__lt__`. Test `<, <=, >, >=`.
+* **Exercise 6: Equality & Value Object Hashing**: Class `UserID(code: str)`. Implement `__eq__` and `__hash__` so instances can be used as keys in a `dict` and elements in a `set`.
+
+### 🟠 Tier 3: Container Protocols & Descriptors (Exercises 7–9)
+* **Exercise 7: Custom Sequence Container (`__len__`, `__getitem__`)**: Class `Playlist`. Implement `__len__`, `__getitem__` (supporting integer index and slices), and `__contains__`.
+* **Exercise 8: Reusable Non-Empty String Descriptor**: Create descriptor `NonEmptyString`. Apply it to `Employee.first_name` and `Employee.last_name` to reject empty strings.
+* **Exercise 9: Stateful Callable Token Bucket Rate Limiter (`__call__`)**: Class `TokenBucket(capacity: int, refill_rate: float)`. Implement `__call__() -> bool` that consumes a token if available.
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+* **Exercise 10: Multi-Currency Financial Value Object & Digital Wallet**: Implement `Money` value object with arithmetic operator overloading and currency mismatch safety, wrapped inside a `DigitalWallet` container dunder class.
+
+---
+
+## 📝 Quick Exercise: Multi-Currency Value Object & Digital Wallet System
 
 ### 🏢 Real-Life Scenario
-You are developing the core financial arithmetic engine for a cross-border fintech payment wallet (such as Wise or Revolut). In fintech software, floating-point rounding errors and currency mismatches cause severe accounting discrepancies. You will implement an encapsulated `Money` class with operator overloading (`+`, `-`, `*`, `==`, `<`) and a container `DigitalWallet` class.
+You are developing a financial ledger engine for a global multi-currency fintech application (such as Stripe or Revolut). The engine must represent monetary values securely as immutable value objects, enforce strict mathematical rules (e.g. preventing adding USD to EUR without conversion), overload operators for natural syntax, and store balances across currencies inside a custom container `DigitalWallet`.
 
 ### 📋 Requirements
 1. **Define the `Money` Class**:
    - Constructor: `__init__(self, amount: float, currency: str = "USD")`
-   - Managed Property `@property` for `amount`: Validates that `amount >= 0.0` (raises `ValueError` on negative values).
-   - Representation:
-     - `__repr__(self)`: Returns `f"Money({self.amount:.2f}, '{self.currency}')"`.
-     - `__str__(self)`: Returns `f"${self.amount:,.2f} {self.currency}"`.
-   - Operator Overloading:
-     - `__add__(self, other: 'Money') -> 'Money'`: Verifies both objects are `Money` instances and share the same currency. Returns new `Money` object with combined amounts. If currencies differ, raises `ValueError`.
-     - `__sub__(self, other: 'Money') -> 'Money'`: Verifies same currency. If `self.amount < other.amount`, raises `ValueError("Insufficient funds for subtraction")`.
-     - `__mul__(self, multiplier: float) -> 'Money'`: Multiplies `amount * multiplier` (for interest / exchange scaling).
-     - `__eq__(self, other: object) -> bool`: True if currencies and amounts match.
-     - `__lt__(self, other: 'Money') -> bool`: Compares amounts when currencies match.
+   - Properties: `@property amount` with `@amount.setter`: Rejects negative amounts and rounds to 2 decimal places.
+   - Magic Dunder Methods: `__repr__`, `__str__`, `__add__`, `__sub__`, `__mul__`, `__eq__`, `__lt__`.
 2. **Define the `DigitalWallet` Class**:
    - Constructor: `__init__(self, owner: str)`
-   - Container state: `self._balances: dict[str, Money] = {}`
-   - Methods:
-     - `deposit(self, money: Money) -> None`: Adds `Money` to currency balance.
-     - `__len__(self) -> int`: Returns number of distinct currency holdings.
-     - `__getitem__(self, currency_code: str) -> Money`: Returns `Money` object for that currency (or `Money(0.0, currency_code)` if not present).
-     - `__str__(self)`: Returns formatted summary.
-3. Test wallet operations with sample deposits, transactions, and currency arithmetic.
-
-> [!IMPORTANT]
-> **Cumulative Constraint**: Combine Level 2 properties, dunders, operator overloading, and exception handling with Level 1 data types, formatting, and dictionaries.
-
-### 🎯 Expected Output
-```text
-==================================================
-              FINTECH DIGITAL WALLET              
-==================================================
-Wallet Owner:     Elena Rostova
-Distinct Currencies (len): 2 currencies
---------------------------------------------------
-USD Balance:      $1,250.00 USD
-EUR Balance:      €850.00 EUR
---------------------------------------------------
-TRANSACTION ARITHMETIC TESTS:
-  ✓ Add Money:     $500.00 USD + $250.00 USD = Money(750.00, 'USD')
-  ✓ Multiply (Fee):$750.00 USD * 0.98 = Money(735.00, 'USD')
-  ✓ Subtraction:   $750.00 USD - $250.00 USD = Money(500.00, 'USD')
-  ✓ Direct Wallet Lookup [USD]: $1,250.00 USD
-==================================================
-```
+   - Methods: `deposit`, `__len__`, `__getitem__`, `__str__`.
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Digital Wallet & 10 Challenges)</b></summary>
 
 ```python
-# 1. Money Domain Value Object (Level 2)
+# =====================================================================
+# SOLUTION: Digital Wallet Engine
+# =====================================================================
 class Money:
     def __init__(self, amount: float, currency: str = "USD"):
         self.currency = currency.upper()
-        self.amount = amount # Invokes property setter
+        self.amount = amount
 
     @property
     def amount(self) -> float:
         return self._amount
-
+    
     @amount.setter
-    def amount(self, value: float) -> None:
-        if value < 0:
-            raise ValueError(f"Money amount cannot be negative: {value}")
+    def amount(self, value: float):
+        if value < 0: raise ValueError("Negative amount")
         self._amount = round(float(value), 2)
 
-    def __repr__(self) -> str:
-        return f"Money({self.amount:.2f}, '{self.currency}')"
-
-    def __str__(self) -> str:
-        symbol = "€" if self.currency == "EUR" else "$"
-        return f"{symbol}{self.amount:,.2f} {self.currency}"
+    def __repr__(self) -> str: return f"Money({self.amount:.2f}, '{self.currency}')"
+    def __str__(self) -> str: return f"${self.amount:,.2f} {self.currency}"
 
     def __add__(self, other: 'Money') -> 'Money':
-        if not isinstance(other, Money):
-            raise TypeError("Operand must be a Money instance")
-        if self.currency != other.currency:
-            raise ValueError(f"Currency mismatch: Cannot add {self.currency} and {other.currency}")
+        if self.currency != other.currency: raise ValueError("Mismatch")
         return Money(self.amount + other.amount, self.currency)
 
     def __sub__(self, other: 'Money') -> 'Money':
-        if not isinstance(other, Money):
-            raise TypeError("Operand must be a Money instance")
-        if self.currency != other.currency:
-            raise ValueError(f"Currency mismatch: Cannot subtract {self.currency} and {other.currency}")
-        if self.amount < other.amount:
-            raise ValueError("Insufficient funds for subtraction")
+        if self.currency != other.currency: raise ValueError("Mismatch")
         return Money(self.amount - other.amount, self.currency)
 
-    def __mul__(self, multiplier: float) -> 'Money':
-        if not isinstance(multiplier, (int, float)):
-            raise TypeError("Multiplier must be a numeric value")
-        return Money(self.amount * multiplier, self.currency)
+    def __mul__(self, m: float) -> 'Money': return Money(self.amount * m, self.currency)
+    def __eq__(self, o) -> bool: return self.currency == o.currency and self.amount == o.amount
+    def __lt__(self, o) -> bool: 
+        if self.currency != o.currency: raise ValueError("Mismatch")
+        return self.amount < o.amount
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Money):
-            return False
-        return self.currency == other.currency and self.amount == other.amount
-
-    def __lt__(self, other: 'Money') -> bool:
-        if self.currency != other.currency:
-            raise ValueError("Cannot compare different currencies")
-        return self.amount < other.amount
-
-
-# 2. Digital Wallet Container (Level 2)
 class DigitalWallet:
     def __init__(self, owner: str):
         self.owner = owner
         self._balances: dict[str, Money] = {}
 
-    def deposit(self, money: Money) -> None:
-        if money.currency in self._balances:
-            self._balances[money.currency] = self._balances[money.currency] + money
-        else:
-            self._balances[money.currency] = money
+    def deposit(self, money: Money):
+        if money.currency in self._balances: self._balances[money.currency] += money
+        else: self._balances[money.currency] = money
 
-    def __len__(self) -> int:
-        return len(self._balances)
+    def __len__(self): return len(self._balances)
+    def __getitem__(self, currency_code: str):
+        return self._balances.get(currency_code.upper(), Money(0.0, currency_code))
 
-    def __getitem__(self, currency_code: str) -> Money:
-        code = currency_code.upper()
-        return self._balances.get(code, Money(0.0, code))
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+class Account:
+    def __init__(self, b: float): self.balance = b
+    @property
+    def balance(self): return self._b
+    @balance.setter
+    def balance(self, v):
+        if v < 0: raise ValueError("Negative balance disallowed")
+        self._b = v
 
+# Ex 2:
+class ServerNode:
+    def __init__(self, ip: str, port: int): self.ip, self.port = ip, port
+    def __str__(self): return f"{self.ip}:{self.port}"
+    def __repr__(self): return f"ServerNode(ip='{self.ip}', port={self.port})"
 
-# 3. Execution Simulation
-wallet = DigitalWallet("Elena Rostova")
-wallet.deposit(Money(1000.00, "USD"))
-wallet.deposit(Money(250.00, "USD"))
-wallet.deposit(Money(850.00, "EUR"))
+# Ex 3:
+import math
+class Circle:
+    def __init__(self, r: float): self.radius = r
+    @property
+    def area(self): return math.pi * (self.radius ** 2)
 
-m1 = Money(500.00, "USD")
-m2 = Money(250.00, "USD")
-m_sum = m1 + m2
-m_mult = m_sum * 0.98
-m_sub = m_sum - m2
+# Ex 4:
+class Vector2D:
+    def __init__(self, x, y): self.x, self.y = x, y
+    def __add__(self, o): return Vector2D(self.x + o.x, self.y + o.y)
+    def __mul__(self, s): return Vector2D(self.x * s, self.y * s)
+    def __repr__(self): return f"Vector2D({self.x}, {self.y})"
 
-print("==================================================")
-print("              FINTECH DIGITAL WALLET              ")
-print("==================================================")
-print(f"Wallet Owner:     {wallet.owner}")
-print(f"Distinct Currencies (len): {len(wallet)} currencies")
-print("--------------------------------------------------")
-print(f"USD Balance:      {wallet['USD']}")
-print(f"EUR Balance:      {wallet['EUR']}")
-print("--------------------------------------------------")
-print("TRANSACTION ARITHMETIC TESTS:")
-print(f"  ✓ Add Money:     {m1} + {m2} = {repr(m_sum)}")
-print(f"  ✓ Multiply (Fee):{m_sum} * 0.98 = {repr(m_mult)}")
-print(f"  ✓ Subtraction:   {m_sum} - {m2} = {repr(m_sub)}")
-print(f"  ✓ Direct Wallet Lookup [USD]: {wallet['USD']}")
-print("==================================================")
+# Ex 5:
+from functools import total_ordering
+@total_ordering
+class Severity:
+    def __init__(self, lvl: int): self.lvl = lvl
+    def __eq__(self, o): return self.lvl == o.lvl
+    def __lt__(self, o): return self.lvl < o.lvl
+
+# Ex 6:
+class UserID:
+    def __init__(self, code: str): self.code = code
+    def __eq__(self, o): return isinstance(o, UserID) and self.code == o.code
+    def __hash__(self): return hash(self.code)
+
+# Ex 7:
+class Playlist:
+    def __init__(self, songs): self._songs = list(songs)
+    def __len__(self): return len(self._songs)
+    def __getitem__(self, idx): return self._songs[idx]
+    def __contains__(self, s): return s in self._songs
+
+# Ex 8:
+class NonEmptyString:
+    def __set_name__(self, owner, name): self.name = f"_{name}"
+    def __get__(self, inst, owner): return getattr(inst, self.name, "")
+    def __set__(self, inst, val):
+        if not val or not isinstance(val, str): raise ValueError("Must be non-empty string")
+        setattr(inst, self.name, val)
+
+# Ex 9:
+class TokenBucket:
+    def __init__(self, cap: int): self.cap = cap
+    def __call__(self):
+        if self.cap > 0:
+            self.cap -= 1
+            return True
+        return False
 ```
-
-**Explanation of the Solution:**
-- `Money` implements a robust value object preventing invalid currency operations and rounding errors.
-- Operator dunders (`__add__`, `__sub__`, `__mul__`, `__eq__`, `__lt__`) enable natural mathematical syntax between financial amounts.
-- `DigitalWallet` utilizes container dunders (`__len__`, `__getitem__`) for clean key-based currency lookups.
 </details>

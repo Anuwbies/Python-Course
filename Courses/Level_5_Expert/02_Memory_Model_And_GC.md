@@ -73,25 +73,86 @@ print(f"Collected {unreachable_collected} cyclical orphan objects.")
 
 ---
 
-## 3. Weak References with `weakref`
+---
 
-A **Weak Reference** references a target object without incrementing its `ob_refcnt`. When the only remaining references to an object are weak references, the object is immediately deallocated:
+## 4. `pymalloc` Allocator Architecture (Arenas, Pools, Blocks)
+
+For objects $\le 512$ bytes, standard C `malloc()` causes extreme memory fragmentation. CPython implements **`pymalloc`**:
+- **Arenas (256 KB)**: Allocated from OS via `malloc()` or `mmap()`.
+- **Pools (4 KB)**: Equal to virtual memory page size. Each pool is partitioned into uniform fixed-size blocks.
+- **Blocks (8 to 512 bytes)**: Grouped in size-classes (e.g. 16-byte, 32-byte, 64-byte blocks) for $\mathcal{O}(1)$ allocation and free lists without system calls.
+
+---
+
+## 5. Python 3.12+ Immortal Objects (`PEP 683`)
+
+In Python 3.12+, immutable global singletons (`None`, `True`, `False`, empty tuples, interned strings, and small integers $[-5, 256]$) have **Immortal Reference Counts** (`refcnt = 0xFFFFFFFF`). Their reference counters are never incremented or decremented in CPU cache, eliminating cache-line invalidation during multi-core reads!
+
+---
+
+## 6. Diagnosing Memory Leaks with `gc.get_referrers()`
 
 ```python
-import weakref
+import gc
 
-class CacheData:
-    def __init__(self, data: str):
-        self.data = data
-
-obj = CacheData("Large 100MB Matrix")
-weak_handle = weakref.ref(obj)
-
-print("Weak reference resolves:", weak_handle().data) # Resolves successfully
-
-del obj # Strong reference deleted -> Immediately deallocated!
-print("Weak reference after deletion:", weak_handle()) # None (Dead reference)
+target_data = {"important": "payload"}
+referrers = gc.get_referrers(target_data)
+print(f"Objects pointing to target: {len(referrers)}")
 ```
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master reference counting, cyclic garbage collection, `weakref`, `pymalloc`, and leak diagnostics:
+
+---
+
+### 🟢 Tier 1: Reference Counting & `sys.getrefcount` (Exercises 1–3)
+
+#### 🔹 Exercise 1: Reference Count Lifecycle
+* **Goal**: Track reference count increases on assignment, passing to functions, and decreases on `del`.
+
+#### 🔹 Exercise 2: Small Integer Caching & Identity
+* **Goal**: Verify that integers in range $[-5, 256]$ share identical memory addresses (`id(a) == id(b)`).
+
+#### 🔹 Exercise 3: Weak Reference Basics (`weakref.ref`)
+* **Goal**: Create a weak reference to a custom class instance and observe it returning `None` when strong ref is deleted.
+
+---
+
+### 🟡 Tier 2: Generational Garbage Collector (Exercises 4–6)
+
+#### 🔹 Exercise 4: Inspect & Tune GC Thresholds
+* **Goal**: Read `gc.get_threshold()` and adjust Generation 0 allocation thresholds.
+
+#### 🔹 Exercise 5: Unreachable Cyclic Collector
+* **Goal**: Build a 2-node mutual reference cycle and collect it manually via `gc.collect()`.
+
+#### 🔹 Exercise 6: WeakValueDictionary Cache Eviction
+* **Goal**: Store 1,000 session objects in a `WeakValueDictionary` and observe automatic eviction as variables go out of scope.
+
+---
+
+### 🟠 Tier 3: Memory Introspection & `tracemalloc` (Exercises 7–9)
+
+#### 🔹 Exercise 7: Object Referrer Graph Analysis
+* **Goal**: Use `gc.get_referrers()` to find which container is holding a lingering reference to an object.
+
+#### 🔹 Exercise 8: Allocator Tracking with `tracemalloc`
+* **Goal**: Take snapshots of memory allocations before and after a loop using `tracemalloc.take_snapshot()`.
+
+#### 🔹 Exercise 9: Finalizer Mechanics (`__del__` vs `weakref.finalize`)
+* **Goal**: Replace legacy `__del__` with `weakref.finalize()` for safe, guaranteed resource cleanup without GC cycle blocking.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Cyclic Reference Memory Leak Diagnostic Engine
+* **Goal**: Build an enterprise diagnostic utility that detects circular data structures, measures unreachable counts, and reclaims memory.
+
+---
 
 ---
 
@@ -237,31 +298,29 @@ GC Collection Execution:
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Cycle Detector & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: CPython Cyclic Leak Detector
+# =====================================================================
 import gc
 
-# 1. Circular Node (Level 5)
 class CircularTaskNode:
     def __init__(self, task_id: str):
         self.task_id = task_id
         self.next_task = None
 
 
-# 2. Cycle Detector Function (Level 5)
 def detect_and_clear_cycle_leak(node_count: int) -> dict:
     gc.disable()
 
-    # Create circular ring
     nodes = [CircularTaskNode(f"TASK-{i}") for i in range(node_count)]
     for i in range(node_count):
         nodes[i].next_task = nodes[(i + 1) % node_count]
 
     root = nodes[0]
-    del nodes # Drop list handle
-
-    # Drop remaining root reference (Ring is now isolated in memory)
+    del nodes
     del root
 
     gc.enable()
@@ -273,7 +332,6 @@ def detect_and_clear_cycle_leak(node_count: int) -> dict:
     }
 
 
-# 3. Execution Simulation
 print("==================================================")
 print("        CPYTHON CYCLIC LEAK DETECTOR TEST         ")
 print("==================================================")
@@ -286,9 +344,48 @@ print("GC Collection Execution:")
 print(f"  ✓ Cyclic Objects Collected: {results['collected_objects']}")
 print("  ✓ Memory State: Clean & Reclaimed ✅")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- Manually creating an isolated cycle and disabling GC demonstrates how circular references prevent standard reference counting deallocation.
-- Re-enabling and executing `gc.collect()` breaks the circular chain and reclaims the leaked objects.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Refcount Lifecycle
+import sys
+a = []
+# sys.getrefcount(a) -> 2
+
+# Ex 2: Small int cache
+x, y = 256, 256
+# x is y -> True
+
+# Ex 3: Weak Reference
+import weakref
+class Dummy: pass
+d = Dummy(); w = weakref.ref(d); del d
+# w() -> None
+
+# Ex 4: GC Thresholds
+# gc.set_threshold(1000, 15, 15)
+
+# Ex 5: Mutual Cycle
+c1, c2 = Dummy(), Dummy()
+c1.partner = c2; c2.partner = c1
+del c1, c2
+# gc.collect() -> 2
+
+# Ex 6: WeakValueDictionary
+w_dict = weakref.WeakValueDictionary()
+def add_to_dict(k, v): w_dict[k] = v
+
+# Ex 7: get_referrers
+# gc.get_referrers(target_obj)
+
+# Ex 8: tracemalloc snapshot
+import tracemalloc
+tracemalloc.start()
+# s = tracemalloc.take_snapshot()
+
+# Ex 9: weakref.finalize
+def cleanup_resource(): pass
+# weakref.finalize(d, cleanup_resource)
+```
 </details>

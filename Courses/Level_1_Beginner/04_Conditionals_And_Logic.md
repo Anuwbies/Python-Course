@@ -96,7 +96,52 @@ if user_domain in blocked_providers:
 
 ---
 
-## 5. Common Boolean Anti-Patterns to Avoid
+---
+
+## 5. Structural Pattern Matching (`match` / `case`) (Python 3.10+)
+
+For complex multi-branch routing, Python 3.10 introduced **Structural Pattern Matching** (`match`/`case`), which is far more expressive and safer than traditional `switch/case` in C++ or Java.
+
+```python
+http_status_code = 404
+
+match http_status_code:
+    case 200 | 201: # OR pattern
+        response = "OK / Resource Created"
+    case 400:
+        response = "Bad Request: Client Error"
+    case 401 | 403:
+        response = "Unauthorized / Forbidden Access"
+    case 404:
+        response = "Not Found: Resource does not exist"
+    case 500 | 502 | 503:
+        response = "Server Gateway Error"
+    case _: # Wildcard pattern (default catch-all like 'else')
+        response = f"Unknown Status Code: {http_status_code}"
+
+print(f"HTTP Status: {response}")
+```
+
+### Pattern Matching with Guard Clauses (`if` inside `case`)
+You can attach guards to case blocks to inspect values conditionally:
+
+```python
+transaction = {"type": "WITHDRAWAL", "amount": 15000.0, "is_flagged": True}
+
+match transaction:
+    case {"type": "WITHDRAWAL", "amount": amt} if amt > 10000.0 or transaction.get("is_flagged"):
+        print(f"🚨 FRAUD ALERT: High-value or flagged withdrawal of ${amt:,.2f}")
+    case {"type": "WITHDRAWAL", "amount": amt}:
+        print(f"Standard withdrawal of ${amt:,.2f} processed.")
+    case {"type": "DEPOSIT", "amount": amt}:
+        print(f"Deposit of ${amt:,.2f} credited.")
+    case _:
+        print("Invalid transaction payload format.")
+```
+
+---
+
+## 6. Common Boolean Anti-Patterns to Avoid
 
 ### ❌ The "Truthiness of Non-Empty Strings" Bug
 ```python
@@ -113,6 +158,21 @@ if user_role == "admin" or user_role == "manager":
 # ✅ EVEN BETTER (using 'in'):
 if user_role in ("admin", "manager"):
     print("Access granted.")
+```
+
+---
+
+## 7. Chained Comparison Mechanics
+
+Python natively supports **chained comparisons** like in mathematical algebra:
+
+```python
+score = 85
+
+# In Python, this is evaluated as: (70 <= score) and (score <= 90)
+# WITHOUT evaluating 'score' multiple times:
+if 70 <= score <= 90:
+    print("Score is in the B Grade range.")
 ```
 
 ---
@@ -203,6 +263,70 @@ print("=" * 65)
 
 ---
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master branching logic, nested decisions, ternary operators, string membership checks, and structural pattern matching:
+
+---
+
+### 🟢 Tier 1: Basic Conditionals & Ternary Expressions (Exercises 1–3)
+
+#### 🔹 Exercise 1: Traffic Signal Controller
+* **Goal**: Given `signal_color = "red"`.
+* **Requirement**: Print `"STOP"` if red, `"CAUTION"` if yellow, `"GO"` if green, or `"SIGNAL MALFUNCTION"` otherwise.
+
+#### 🔹 Exercise 2: Inline Ternary Discount Applier
+* **Goal**: Given `is_member = True` and `price = 100.0`.
+* **Requirement**: Use a one-line ternary expression to compute `final_price = price * 0.90 if is_member else price`. Print `f"Final Price: ${final_price:.2f}"`.
+
+#### 🔹 Exercise 3: Pass/Fail Grade Boundary
+* **Goal**: Prompt for test score (0-100).
+* **Requirement**: If `score >= 60`, print `"PASSED"`, otherwise `"FAILED"`.
+
+---
+
+### 🟡 Tier 2: Multi-Branch & String Containment (Exercises 4–6)
+
+#### 🔹 Exercise 4: Academic Letter Grade Classifier
+* **Goal**: Given numeric grade `score` (0–100).
+* **Scale**: `90-100` $\rightarrow$ `"A"`, `80-89` $\rightarrow$ `"B"`, `70-79` $\rightarrow$ `"C"`, `60-69` $\rightarrow$ `"D"`, `<60` $\rightarrow$ `"F"`.
+* **Requirement**: Use chained comparisons (`90 <= score <= 100`) in an `if-elif-else` block.
+
+#### 🔹 Exercise 5: Malicious URL Protocol & Domain Inspector
+* **Goal**: Prompt for a URL string.
+* **Requirement**: Check if it starts with `"https://"` and does NOT contain `"phishing"` or `"tracker"`. Print safety verdict.
+
+#### 🔹 Exercise 6: Leap Year Evaluator
+* **Goal**: Prompt for a year integer (e.g. `2024`).
+* **Rule**: A year is a leap year if `(year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)`.
+* **Requirement**: Print whether the year is a leap year.
+
+---
+
+### 🟠 Tier 3: Nested Decisions & Pattern Matching (Exercises 7–9)
+
+#### 🔹 Exercise 7: ATM Cash Withdrawal Processor
+* **Goal**: Given `balance = 500.0`, `daily_limit = 300.0`.
+* **Input**: Prompt for `withdraw_amount`.
+* **Rules**: Check if `withdraw_amount % 20 == 0` (only $20 bills). Then check `withdraw_amount <= daily_limit`. Then check `withdraw_amount <= balance`. Provide precise rejection reasons for each failure point.
+
+#### 🔹 Exercise 8: Structural `match/case` REST API Router
+* **Goal**: Given `method = "POST"` and `endpoint = "/api/v1/users"`.
+* **Requirement**: Use `match (method, endpoint):` to handle `("GET", "/api/v1/users")`, `("POST", "/api/v1/users")`, and wildcard `_`.
+
+#### 🔹 Exercise 9: Server Health Tier Classifier with Guards
+* **Goal**: Given a dictionary `telemetry = {"cpu": 95, "mem": 88, "disk": 70}`.
+* **Requirement**: Use `match/case` with guard clauses to classify `CRITICAL` (any metric > 90), `WARNING` (any metric > 75), or `HEALTHY`.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Hospital Emergency Triage Badge Classifier
+* **Goal**: Take patient vitals ($SpO_2$, HR, Pain scale, Symptoms), classify ESI severity Level 1 to 4, and compute estimated wait times.
+
+---
+
 ## 📝 Quick Exercise: Hospital Emergency Department Triage Classifier
 
 ### 🏢 Real-Life Scenario
@@ -253,10 +377,12 @@ EST. WAIT TIME:0 mins (IMMEDIATE DOCTOR EVALUATION)
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Hospital & 10 Challenges)</b></summary>
 
 ```python
-# 1. Inputs and Sanitization (Lessons 1 & 2)
+# =====================================================================
+# SOLUTION: Emergency Triage Intake Pass
+# =====================================================================
 patient_name = input("Enter Patient Name: ").strip().title()
 patient_age = int(input("Enter Patient Age: "))
 heart_rate_bpm = int(input("Enter Resting Heart Rate (BPM): "))
@@ -264,7 +390,6 @@ spo2_percentage = float(input("Enter Blood Oxygen SpO2 (%): "))
 pain_level = int(input("Enter Pain Scale (1-10): "))
 symptoms = input("Enter Chief Symptoms: ").strip().lower()
 
-# 2. Triage Decision Tree (Lessons 3 & 4)
 if (spo2_percentage < 88.0) or (heart_rate_bpm > 140) or ("unresponsive" in symptoms or "cardiac" in symptoms):
     triage_level = "LEVEL 1 - CRITICAL"
     assigned_ward = "RESUSCITATION UNIT"
@@ -282,7 +407,6 @@ else:
     assigned_ward = "GENERAL CLINIC WAITING"
     est_wait = "60 mins"
 
-# 3. Formatted Triage Pass Output (Lesson 1)
 print("\n==================================================")
 print("           EMERGENCY TRIAGE INTAKE PASS           ")
 print("==================================================")
@@ -294,9 +418,64 @@ print(f"TRIAGE LEVEL:  {triage_level}")
 print(f"ASSIGNED WARD: {assigned_ward}")
 print(f"EST. WAIT TIME:{est_wait}")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `symptoms` is normalized to lowercase so string membership searches (`"chest pain" in symptoms`) work regardless of user casing.
-- The highest risk life-threat conditions are evaluated at the top of the `if-elif` chain to prevent missing emergency protocols.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+color = "red"
+if color == "red": print("STOP")
+elif color == "yellow": print("CAUTION")
+elif color == "green": print("GO")
+else: print("SIGNAL MALFUNCTION")
+
+# Ex 2:
+is_member, price = True, 100.0
+final_p = price * 0.90 if is_member else price
+print(f"Final Price: ${final_p:.2f}")
+
+# Ex 3:
+score = int(input("Score: "))
+print("PASSED" if score >= 60 else "FAILED")
+
+# Ex 4:
+s = 85
+if 90 <= s <= 100: grade = "A"
+elif 80 <= s < 90: grade = "B"
+elif 70 <= s < 80: grade = "C"
+elif 60 <= s < 70: grade = "D"
+else: grade = "F"
+print(f"Grade: {grade}")
+
+# Ex 5:
+url = input("URL: ").strip().lower()
+is_safe = url.startswith("https://") and ("phishing" not in url) and ("tracker" not in url)
+print(f"Safe: {is_safe}")
+
+# Ex 6:
+year = int(input("Year: "))
+is_leap = (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+print(f"Leap Year: {is_leap}")
+
+# Ex 7:
+bal, limit, amt = 500.0, 300.0, float(input("Withdrawal: "))
+if amt % 20 != 0: print("Must be multiples of $20")
+elif amt > limit: print("Exceeds daily limit")
+elif amt > bal: print("Insufficient funds")
+else: print(f"Dispensing ${amt:.2f}")
+
+# Ex 8:
+method, ep = "POST", "/api/v1/users"
+match (method, ep):
+    case ("GET", "/api/v1/users"): print("List users")
+    case ("POST", "/api/v1/users"): print("Create user")
+    case _: print("404 Route Not Found")
+
+# Ex 9:
+t = {"cpu": 95, "mem": 88, "disk": 70}
+match t:
+    case _ if any(v > 90 for v in t.values()): print("CRITICAL")
+    case _ if any(v > 75 for v in t.values()): print("WARNING")
+    case _: print("HEALTHY")
+```
 </details>

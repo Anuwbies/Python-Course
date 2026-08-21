@@ -59,21 +59,99 @@ ORDER BY lifetime_value DESC;
 
 ---
 
-## 3. SQL Injection Prevention & Parameterized Queries
+---
 
-> [!CAUTION]
-> **Never format or concatenate raw strings into SQL queries!**
-> Concatenating input (`f"SELECT * FROM users WHERE email = '{user_input}'"`) allows attackers to inject malicious SQL commands (e.g. `' OR '1'='1' --`). Always use parameterized place-markers (`?` in SQLite, `%s` in Postgres).
+## 4. ACID Transaction Guarantees & Isolation Levels
 
-```python
-import sqlite3
+| Principle | Description | Mechanism |
+| :--- | :--- | :--- |
+| **Atomicity** | All statements execute completely or all changes roll back. | Undo Logs / Savepoints |
+| **Consistency** | Database transitions only between valid states satisfying constraints. | Schema Foreign Key & Unique Checks |
+| **Isolation** | Concurrent transactions execute without mutual interference. | MVCC (Multi-Version Concurrency Control) / Locks |
+| **Durability** | Committed transactions survive power loss or crashes. | WAL (Write-Ahead Logging) to disk |
 
-# ❌ VULNERABLE:
-# cursor.execute(f"SELECT * FROM users WHERE email = '{user_email}'")
+### Isolation Levels & Anomalies
+1. **Read Uncommitted**: Suffers from *Dirty Reads* (reading uncommitted data).
+2. **Read Committed** (Default in PostgreSQL): Prevents dirty reads; suffers from *Non-Repeatable Reads*.
+3. **Repeatable Read**: Prevents non-repeatable reads; snapshots row versions.
+4. **Serializable**: Strict serial ordering; prevents all concurrency anomalies including *Phantom Reads*.
 
-# ✅ SAFE PARAMETERIZED QUERY:
-cursor.execute("SELECT * FROM users WHERE email = ?", (user_email,))
+---
+
+## 5. B-Tree Indexes & Composite Index Rules
+
+- **B-Tree Index**: Automatically created for `PRIMARY KEY` and `UNIQUE` columns. Provides $\mathcal{O}(\log n)$ equality and range searches.
+- **Leftmost Prefix Rule**: A composite index on `(last_name, first_name)` accelerates queries on `last_name` alone, but **cannot** accelerate queries filtering solely on `first_name`.
+
+---
+
+## 6. SQL Window Functions (`OVER (PARTITION BY ... ORDER BY ...)`)
+
+Window functions calculate running totals and rankings across partitions without collapsing rows like `GROUP BY`:
+
+```sql
+SELECT 
+    employee_id,
+    department,
+    salary,
+    RANK() OVER (PARTITION BY department ORDER BY salary DESC) as salary_rank,
+    AVG(salary) OVER (PARTITION BY department) as dept_avg_salary
+FROM employees;
 ```
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master SQL DDL/DML, relational joins, ACID transactions, window functions, and indexing:
+
+---
+
+### 🟢 Tier 1: Schema DDL & Basic CRUD (Exercises 1–3)
+
+#### 🔹 Exercise 1: Table Creation with Constraints
+* **Goal**: Write DDL creating `products` with `CHECK (price > 0)` and `UNIQUE(sku)`.
+
+#### 🔹 Exercise 2: Parameterized Batch Insert
+* **Goal**: Insert 10 user rows using `cursor.executemany("INSERT INTO ... VALUES (?, ?)", rows)`.
+
+#### 🔹 Exercise 3: Filter & Sorting Queries
+* **Goal**: Select active users with `status = 'ACTIVE'` ordered by `created_at DESC` with `LIMIT 10`.
+
+---
+
+### 🟡 Tier 2: Relational JOINs & Aggregations (Exercises 4–6)
+
+#### 🔹 Exercise 4: Inner vs Left Outer Join
+* **Goal**: Fetch all customers including those who have never placed an order using `LEFT JOIN`.
+
+#### 🔹 Exercise 5: Group By and Having Filter
+* **Goal**: Find all departments with total payroll budget exceeding $\$500,000$ using `HAVING SUM(salary) > 500000`.
+
+#### 🔹 Exercise 6: Cascade Deletion Foreign Keys
+* **Goal**: Verify that deleting a parent user row automatically cascades to delete all child orders in SQLite with `PRAGMA foreign_keys = ON;`.
+
+---
+
+### 🟠 Tier 3: ACID Transactions & Window Analytics (Exercises 7–9)
+
+#### 🔹 Exercise 7: Atomic Multi-Account Wire Transfer
+* **Goal**: Execute a debit and credit within a single SQL transaction, triggering `conn.rollback()` on insufficient balance.
+
+#### 🔹 Exercise 8: Ranking with Window Functions
+* **Goal**: Assign `DENSE_RANK()` to students ordered by test score per classroom `PARTITION BY classroom_id`.
+
+#### 🔹 Exercise 9: SQL Query Execution Plan (`EXPLAIN QUERY PLAN`)
+* **Goal**: Run `EXPLAIN QUERY PLAN` on an unindexed query (Scan Table) vs indexed query (Search Table using Index).
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Academic Registrar GPA Engine
+* **Goal**: Build a multi-table university grading database computing student credit-weighted GPAs with relational JOIN aggregations.
+
+---
 
 ---
 
@@ -286,9 +364,12 @@ Marcus Vance         |             2 |       8 |  3.15
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Registrar & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: University Academic Registrar GPA Engine
+# =====================================================================
 import sqlite3
 import os
 
@@ -299,7 +380,6 @@ if os.path.exists(DB_NAME):
 conn = sqlite3.connect(DB_NAME)
 cursor = conn.cursor()
 
-# 1. DDL Schema Definition (Level 4)
 cursor.executescript("""
 CREATE TABLE students (
     student_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -324,7 +404,6 @@ CREATE TABLE enrollments (
 """)
 conn.commit()
 
-# 2. Seed Data
 cursor.executemany(
     "INSERT INTO students (name, email) VALUES (?, ?)",
     [("Elena Rostova", "elena@uni.edu"), ("Marcus Vance", "marcus@uni.edu")]
@@ -338,15 +417,14 @@ cursor.executemany(
 cursor.executemany(
     "INSERT INTO enrollments (student_id, course_id, grade_points) VALUES (?, ?, ?)",
     [
-        (1, 1, 4.0), # Elena CS101
-        (1, 2, 3.7), # Elena MATH201
-        (2, 1, 3.0), # Marcus CS101
-        (2, 3, 3.3), # Marcus PHYS101
+        (1, 1, 4.0),
+        (1, 2, 3.7),
+        (2, 1, 3.0),
+        (2, 3, 3.3),
     ]
 )
 conn.commit()
 
-# 3. GPA Aggregation Query (Level 4)
 cursor.execute("""
 SELECT 
     s.name,
@@ -374,9 +452,35 @@ print("==================================================")
 conn.close()
 if os.path.exists(DB_NAME):
     os.remove(DB_NAME)
-```
 
-**Explanation of the Solution:**
-- Foreign keys link `enrollments` back to `students` and `courses`.
-- The weighted GPA calculation performs mathematical multiplication and aggregation directly in the SQL engine (`SUM(grade_points * credits) / SUM(credits)`).
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Schema Constraints
+# CREATE TABLE products (id INTEGER PRIMARY KEY, sku TEXT UNIQUE, price REAL CHECK(price > 0));
+
+# Ex 2: Parameterized Batch Insert
+# cursor.executemany("INSERT INTO users (email) VALUES (?)", [("a@b.com",), ("c@d.com",)])
+
+# Ex 3: Filter & Sort
+# cursor.execute("SELECT * FROM users WHERE status = 'ACTIVE' ORDER BY created_at DESC LIMIT 10")
+
+# Ex 4: Left Join
+# cursor.execute("SELECT u.id, o.id FROM users u LEFT JOIN orders o ON u.id = o.user_id")
+
+# Ex 5: Group By & Having
+# cursor.execute("SELECT dept, SUM(salary) FROM emp GROUP BY dept HAVING SUM(salary) > 500000")
+
+# Ex 6: Cascade Deletion
+# FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+
+# Ex 7: Transaction Rollback
+# try: conn.execute(...); conn.commit() except Exception: conn.rollback()
+
+# Ex 8: Window Rank
+# SELECT id, dept, salary, DENSE_RANK() OVER (PARTITION BY dept ORDER BY salary DESC) FROM emp
+
+# Ex 9: EXPLAIN QUERY PLAN
+# cursor.execute("EXPLAIN QUERY PLAN SELECT * FROM users WHERE email = 'test@example.com'")
+```
 </details>

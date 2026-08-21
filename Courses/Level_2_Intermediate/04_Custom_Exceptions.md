@@ -73,24 +73,48 @@ except PaymentGatewayError as base_err:
 
 ---
 
-## 3. Explicit Exception Chaining (`raise ... from`)
+---
 
-When an unexpected low-level error (like a socket timeout or database disconnection) causes a domain failure, you should translate it into a domain exception while preserving the original cause:
+## 4. Under the Hood: `__cause__`, `__context__` & Suppressing Tracebacks
+
+When an exception occurs while handling another exception:
+- **Implicit Context (`__context__`)**: Python automatically saves the previous error on `err.__context__` and displays: `"During handling of the above exception, another exception occurred"`.
+- **Explicit Chaining (`__cause__`)**: Using `raise NewError() from orig_err` explicitly sets `err.__cause__` and displays: `"The above exception was the direct cause of the following exception"`.
+- **Suppressing Context (`from None`)**: To hide internal implementation tracebacks from API consumers:
 
 ```python
-import json
-
-class ConfigFileCorruptedError(Exception):
-    """Raised when JSON configuration parsing fails."""
-    pass
-
-def load_system_settings(filepath: str) -> dict:
+def get_user_record(user_id: str) -> dict:
     try:
-        with open(filepath, "r") as f:
-            return json.loads(f.read())
-    except (json.JSONDecodeError, FileNotFoundError) as original_err:
-        # 'from original_err' links the low-level cause directly to the new exception in tracebacks
-        raise ConfigFileCorruptedError(f"Failed to load critical system config: {filepath}") from original_err
+        return internal_database_lookup(user_id)
+    except KeyError:
+        # Hides internal KeyError and only shows clean UserNotFoundError:
+        raise UserNotFoundError(f"User '{user_id}' does not exist.") from None
+```
+
+---
+
+## 5. Python 3.11+ Exception Groups (`except*`)
+
+Modern Python allows aggregating multiple concurrent errors (e.g. from async task pools) using `ExceptionGroup`:
+
+```python
+# Multiple concurrent operational errors packaged into a single group:
+eg = ExceptionGroup(
+    "Data Sync Failures",
+    [
+        ValueError("Invalid format on row 4"),
+        TimeoutError("Database connection timed out"),
+        ValueError("Negative price on row 12"),
+    ]
+)
+
+# Handling specific exception types within the group using except*:
+try:
+    raise eg
+except* ValueError as val_errs:
+    print(f"Handled {len(val_errs.exceptions)} validation errors!")
+except* TimeoutError as net_errs:
+    print("Handled network timeout!")
 ```
 
 ---
@@ -234,6 +258,64 @@ print("=" * 75)
 ### 🏢 Real-Life Scenario
 You are developing an API Gateway security firewall for a microservices cluster. Incoming HTTP requests pass an API authentication token and client IP address. You must design an exception hierarchy to handle authentication tokens that are missing, expired, revoked, or exceeding rate limits, returning structured HTTP status responses.
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master custom exception hierarchies, contextual payloads, exception chaining, context suppression, and ExceptionGroups:
+
+---
+
+### 🟢 Tier 1: Basic Custom Exceptions (Exercises 1–3)
+
+#### 🔹 Exercise 1: Invalid PIN Domain Exception
+* **Goal**: Create `class InvalidPINError(Exception)`. Write `verify_pin(pin: str)` raising this error if `len(pin) != 4` or not numeric.
+
+#### 🔹 Exercise 2: Out of Stock Inventory Exception
+* **Goal**: Create `class OutOfStockError(Exception)` with `item_name: str` and `requested_qty: int` attributes.
+
+#### 🔹 Exercise 3: User Authentication Failure
+* **Goal**: Create `class AuthenticationFailedError(Exception)`. Catch and report in user-friendly format.
+
+---
+
+### 🟡 Tier 2: Hierarchies & Rich Payloads (Exercises 4–6)
+
+#### 🔹 Exercise 4: Database Error Hierarchy
+* **Goal**: Base `DatabaseError(Exception)`. Subclasses `RecordNotFoundError`, `DuplicateKeyError`, `ConnectionTimeoutError`.
+* **Requirement**: Demonstrate catching all three using `except DatabaseError:`.
+
+#### 🔹 Exercise 5: Structured HTTP Error with JSON Payload
+* **Goal**: Class `APIError(Exception)` with `status_code: int` and `error_code: str`. Method `to_dict()` outputs JSON-serializable dictionary.
+
+#### 🔹 Exercise 6: Validation Error with Field Mappings
+* **Goal**: Class `ValidationError(Exception)` storing `errors: dict[str, list[str]]` (mapping form field names to validation error messages).
+
+---
+
+### 🟠 Tier 3: Chaining, Suppression & ExceptionGroups (Exercises 7–9)
+
+#### 🔹 Exercise 7: Translation & Explicit Chaining (`from err`)
+* **Goal**: In `fetch_remote_profile()`, catch `urllib.error.URLError` and `raise ServiceUnavailableError("Profile backend down") from err`.
+
+#### 🔹 Exercise 8: Context Suppression (`from None`)
+* **Goal**: In `decrypt_token()`, catch `KeyError` or `ValueError` and `raise InvalidTokenError("Corrupted token") from None`. Verify traceback is clean.
+
+#### 🔹 Exercise 9: ExceptionGroup Batch Processing (`except*`)
+* **Goal**: Collect multiple file ingestion errors in an `ExceptionGroup` and handle `FileNotFoundError` and `PermissionError` separately using `except*`.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: API Gateway Security Firewall & Auth Failure System
+* **Goal**: Build base `GatewaySecurityException` with specialized subclasses (`TokenMissing`, `TokenExpired`, `RateLimitExceeded`) and error dispatch logic.
+
+---
+
+## 📝 Quick Exercise: API Gateway Security Firewall & Auth Failure System
+
+### 🏢 Real-Life Scenario
+You are developing an API Gateway reverse-proxy firewall (such as Kong or Envoy) protecting microservices from unauthorized access, expired tokens, and abusive request rates. The firewall module intercepts incoming HTTP requests, validates headers and rate limits, raises custom domain exceptions carrying status codes and audit keys, and logs structured responses.
+
 ### 📋 Requirements
 1. **Define Base Exception `GatewaySecurityException(Exception)`**:
    - Constructor: `__init__(self, message: str, status_code: int = 400, error_key: str = "SECURITY_FAULT")`
@@ -264,10 +346,12 @@ You are developing an API Gateway security firewall for a microservices cluster.
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (API Gateway & 10 Challenges)</b></summary>
 
 ```python
-# 1. Custom Exception Hierarchy (Level 2)
+# =====================================================================
+# SOLUTION: API Gateway Security Firewall
+# =====================================================================
 class GatewaySecurityException(Exception):
     def __init__(self, message: str, status_code: int = 400, error_key: str = "SECURITY_FAULT"):
         super().__init__(message)
@@ -307,7 +391,6 @@ class RateLimitExceededException(GatewaySecurityException):
         self.requests_count = requests_count
 
 
-# 2. Gateway Security Guard
 def authenticate_api_request(headers: dict, client_ip: str, request_counts: dict) -> dict:
     if "Authorization" not in headers:
         raise TokenMissingException()
@@ -325,7 +408,6 @@ def authenticate_api_request(headers: dict, client_ip: str, request_counts: dict
     return {"status": "AUTHORIZED", "client": auth_token, "ip": client_ip}
 
 
-# 3. Test Firewall Requests
 test_requests = [
     ({"Authorization": "Bearer token_live_101"}, "192.168.1.1"),
     ({}, "192.168.1.2"),
@@ -333,7 +415,7 @@ test_requests = [
     ({"Authorization": "Bearer token_rate_test"}, "10.0.0.99"),
 ]
 
-ip_history = {"10.0.0.99": 11} # Pre-existing requests exceeding rate threshold
+ip_history = {"10.0.0.99": 11}
 
 print("==================================================")
 print("        API GATEWAY SECURITY FIREWALL LOGS        ")
@@ -347,10 +429,62 @@ for headers, ip in test_requests:
         print(f"[{ex.status_code} ERR] Status {ex.status_code} ({ex.error_key}): {ex.message}")
 
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `GatewaySecurityException` establishes common HTTP status metadata across all security issues.
-- Individual error subclasses specialize error codes and status responses (`401 Unauthorized`, `429 Too Many Requests`).
-- Polymorphic `except GatewaySecurityException as ex:` cleanly captures all security failures.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+class InvalidPINError(Exception): pass
+def verify_pin(pin: str):
+    if len(pin) != 4 or not pin.isdigit(): raise InvalidPINError("PIN must be 4 digits")
+
+# Ex 2:
+class OutOfStockError(Exception):
+    def __init__(self, item: str, qty: int):
+        super().__init__(f"Item '{item}' out of stock for requested {qty}")
+        self.item, self.qty = item, qty
+
+# Ex 3:
+class AuthenticationFailedError(Exception): pass
+
+# Ex 4:
+class DatabaseError(Exception): pass
+class RecordNotFoundError(DatabaseError): pass
+class DuplicateKeyError(DatabaseError): pass
+class ConnectionTimeoutError(DatabaseError): pass
+
+# Ex 5:
+class APIError(Exception):
+    def __init__(self, msg: str, code: int, key: str):
+        super().__init__(msg)
+        self.msg, self.code, self.key = msg, code, key
+    def to_dict(self): return {"error": self.msg, "status": self.code, "code": self.key}
+
+# Ex 6:
+class ValidationError(Exception):
+    def __init__(self, err_dict: dict):
+        super().__init__(f"Validation errors on fields: {list(err_dict.keys())}")
+        self.errors = err_dict
+
+# Ex 7:
+class ServiceUnavailableError(Exception): pass
+def fetch_profile():
+    try:
+        raise ConnectionResetError("Socket dropped")
+    except ConnectionResetError as err:
+        raise ServiceUnavailableError("Profile backend unavailable") from err
+
+# Ex 8:
+class InvalidTokenError(Exception): pass
+def decrypt_token():
+    try: raise KeyError("missing key")
+    except KeyError: raise InvalidTokenError("Corrupted token") from None
+
+# Ex 9:
+eg = ExceptionGroup("File Batch Errors", [FileNotFoundError("file1.txt"), PermissionError("file2.txt")])
+try: raise eg
+except* FileNotFoundError as f_errs: print(f"Missing files: {len(f_errs.exceptions)}")
+except* PermissionError as p_errs: print(f"Permission issues: {len(p_errs.exceptions)}")
+```
 </details>
+

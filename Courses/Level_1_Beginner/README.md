@@ -15,10 +15,10 @@ Welcome to **Level 1**! This course introduces the foundations of computer scien
 | **Lesson 5** | [05_Loops_And_Iteration.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/05_Loops_And_Iteration.md) | [x] | `COMPLETED` ✅ |
 | **Lesson 6** | [06_Lists_And_Tuples.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/06_Lists_And_Tuples.md) | [x] | `COMPLETED` ✅ |
 | **Lesson 7** | [07_Dictionaries_And_Sets.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/07_Dictionaries_And_Sets.md) | [x] | `COMPLETED` ✅ |
-| **Lesson 8** | [08_Functions_And_Scope.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/08_Functions_And_Scope.md) | [x] | `COMPLETED` ✅ |
-| **Lesson 9** | [09_File_IO_And_Exceptions.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/09_File_IO_And_Exceptions.md) | [x] | `COMPLETED` ✅ |
-| **Lesson 10**| [10_OOP_Fundamentals.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/10_OOP_Fundamentals.md) | [x] | `COMPLETED` ✅ |
-| **Capstone** | **Level 1 Capstone Project** | — | `PENDING` ⏳ |
+| **Lesson 8** | [08_Functions_And_Scope.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/08_Functions_And_Scope.md) | [ ] | `PENDING` ⏳ |
+| **Lesson 9** | [09_File_IO_And_Exceptions.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/09_File_IO_And_Exceptions.md) | [ ] | `PENDING` ⏳ |
+| **Lesson 10**| [10_OOP_Fundamentals.md](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/10_OOP_Fundamentals.md) | [ ] | `PENDING` ⏳ |
+| **Capstone** | **Level 1 Capstone Project** | [ ] | `PENDING` ⏳ |
 
 ---
 

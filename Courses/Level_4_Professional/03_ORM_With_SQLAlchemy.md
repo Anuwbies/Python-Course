@@ -69,23 +69,107 @@ async def init_db():
 
 ---
 
-## 3. Querying & Preventing the N+1 Query Trap
+---
 
-> [!WARNING]
-> In async mode, accessing un-loaded relationships (`employee.company.name`) outside of the initial query raises an `InvalidRequestError` or triggers hidden $\mathcal{O}(N)$ sequential queries. Always use **`selectinload`** to eagerly load related records in a single optimized query!
+## 4. Under the Hood: Unit of Work & Identity Map
+
+SQLAlchemy `Session` implements the **Unit of Work** and **Identity Map** patterns:
+- **Identity Map**: Keeps track of every loaded Python object by primary key (`(Company, 1)`). Multiple queries for the same primary key return the exact same Python instance in memory (`obj1 is obj2`), eliminating duplicate objects.
+- **Unit of Work**: Changes made to objects (`user.email = "new@corp.com"`) are tracked in memory without sending immediate SQL. When `session.commit()` is called, SQLAlchemy computes the minimal topological diff and flushes changes in an optimized batch.
+
+---
+
+## 5. Many-to-Many Relationships & Association Tables
 
 ```python
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy import Table, Column, Integer, ForeignKey
 
-async def fetch_companies_with_staff():
-    async with AsyncSessionLocal() as session:
-        # selectinload eagerly fetches employees in a single secondary SQL SELECT IN query:
-        stmt = select(Company).options(selectinload(Company.employees))
-        result = await session.execute(stmt)
-        companies = result.scalars().all()
-        return companies
+# Dedicated Association Table (stores purely linking foreign keys):
+user_role_association = Table(
+    "user_roles",
+    Base.metadata,
+    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True),
+    Column("role_id", Integer, ForeignKey("roles.id"), primary_key=True),
+)
+
+class User(Base):
+    __tablename__ = "users"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    roles: Mapped[List["Role"]] = relationship(secondary=user_role_association, back_populates="users")
+
+class Role(Base):
+    __tablename__ = "roles"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    users: Mapped[List["User"]] = relationship(secondary=user_role_association, back_populates="roles")
 ```
+
+---
+
+## 6. Connection Pool Configuration for Production
+
+```python
+engine = create_async_engine(
+    "postgresql+asyncpg://user:pass@localhost/prod_db",
+    pool_size=20,          # Persistent baseline connection count
+    max_overflow=10,       # Temporary surge capacity
+    pool_recycle=1800,     # Recycle connections after 30 mins to avoid dropped sockets
+    pool_pre_ping=True,    # Test connections before checkout (eliminates stale socket errors)
+)
+```
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master SQLAlchemy 2.0 declarative models, async querying, relations, and eager loading:
+
+---
+
+### 🟢 Tier 1: Declarative Models & Async CRUD (Exercises 1–3)
+
+#### 🔹 Exercise 1: Single Model Declaration
+* **Goal**: Define `Product(Base)` with `id`, `sku`, and `price` using `Mapped` and `mapped_column`.
+
+#### 🔹 Exercise 2: Async Table Creation & Add Record
+* **Goal**: Initialize an async SQLite memory database and insert a new product within `async with session.begin():`.
+
+#### 🔹 Exercise 3: Type-Safe Async Select
+* **Goal**: Query products with `select(Product).where(Product.price > 50.0)` using `scalars().all()`.
+
+---
+
+### 🟡 Tier 2: Relationships & Cascades (Exercises 4–6)
+
+#### 🔹 Exercise 4: One-to-Many Bidirectional Relationship
+* **Goal**: Build `Author` and `Book` models with `relationship(back_populates="...")`.
+
+#### 🔹 Exercise 5: Cascade Orphan Deletion
+* **Goal**: Configure `cascade="all, delete-orphan"` on child records and verify child rows are deleted when removed from list.
+
+#### 🔹 Exercise 6: Many-to-Many Association
+* **Goal**: Build `Student` and `Course` models connected via `secondary=association_table`.
+
+---
+
+### 🟠 Tier 3: Eager Loading & Complex Async Queries (Exercises 7–9)
+
+#### 🔹 Exercise 7: Eliminate N+1 with `selectinload`
+* **Goal**: Load 10 authors and all their books in 2 optimized SQL queries using `selectinload(Author.books)`.
+
+#### 🔹 Exercise 8: Joined Eager Loading with `joinedload`
+* **Goal**: Query single orders with their customer details using `joinedload(Order.customer)`.
+
+#### 🔹 Exercise 9: Async Aggregations & Grouping
+* **Goal**: Write an async `select(Department.name, func.count(Employee.id)).group_by(...)` query.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Customer Support Helpdesk ORM Engine
+* **Goal**: Model a multi-tiered helpdesk support ticket database with async session transactions and eager ticket loading.
+
+---
 
 ---
 
@@ -239,22 +323,23 @@ TICKETS:
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Helpdesk ORM & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Customer Support Helpdesk ORM Engine
+# =====================================================================
 import asyncio
 from typing import List
 from sqlalchemy import String, ForeignKey, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, selectinload
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
-# 1. Models (Level 4)
 class Base(DeclarativeBase):
     pass
 
 class Customer(Base):
     __tablename__ = "customers"
-
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True)
     full_name: Mapped[str] = mapped_column(String(100))
@@ -262,7 +347,6 @@ class Customer(Base):
 
 class SupportTicket(Base):
     __tablename__ = "support_tickets"
-
     id: Mapped[int] = mapped_column(primary_key=True)
     subject: Mapped[str] = mapped_column(String(200))
     priority: Mapped[str] = mapped_column(String(20))
@@ -271,7 +355,6 @@ class SupportTicket(Base):
     customer: Mapped["Customer"] = relationship(back_populates="tickets")
 
 
-# 2. Async Execution Simulation
 async def run_support_engine():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async_session = async_sessionmaker(engine, expire_on_commit=False)
@@ -279,7 +362,6 @@ async def run_support_engine():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    # Seed
     async with async_session() as session:
         async with session.begin():
             c = Customer(email="elena@enterprise.com", full_name="Elena Rostova")
@@ -287,7 +369,6 @@ async def run_support_engine():
             t2 = SupportTicket(subject="Request invoice copy for Q2", priority="LOW", status="RESOLVED", customer=c)
             session.add_all([c, t1, t2])
 
-    # Query with selectinload
     async with async_session() as session:
         stmt = select(Customer).options(selectinload(Customer.tickets))
         res = await session.execute(stmt)
@@ -308,9 +389,41 @@ async def run_support_engine():
 
 if __name__ == "__main__":
     asyncio.run(run_support_engine())
-```
 
-**Explanation of the Solution:**
-- `Customer` and `SupportTicket` declare type-safe bidirectional relationships using `Mapped[List[...]]` and `back_populates`.
-- `selectinload(Customer.tickets)` eagerly pulls related tickets into memory in an async session, avoiding runtime errors.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Product Model
+class Product(Base):
+    __tablename__ = "products"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    sku: Mapped[str] = mapped_column(String(50), unique=True)
+    price: Mapped[float]
+
+# Ex 2: Async Add
+# async with session.begin(): session.add(Product(sku="P1", price=10.0))
+
+# Ex 3: Select Where
+# stmt = select(Product).where(Product.price > 50.0); res = await session.scalars(stmt)
+
+# Ex 4: One-to-Many
+# class Author(Base): books: Mapped[List["Book"]] = relationship(back_populates="author")
+
+# Ex 5: Orphan Cascade
+# children: Mapped[List["Child"]] = relationship(cascade="all, delete-orphan")
+
+# Ex 6: Many-to-Many
+# roles: Mapped[List["Role"]] = relationship(secondary=user_roles)
+
+# Ex 7: selectinload
+# select(Author).options(selectinload(Author.books))
+
+# Ex 8: joinedload
+# from sqlalchemy.orm import joinedload
+# select(Order).options(joinedload(Order.customer))
+
+# Ex 9: Group By Aggregations
+# from sqlalchemy import func
+# select(Department.name, func.count(Employee.id)).group_by(Department.name)
+```
 </details>

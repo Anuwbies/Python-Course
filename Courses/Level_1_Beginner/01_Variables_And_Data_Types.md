@@ -51,26 +51,49 @@ print(" [DONE]")                             # Output: Loading server data... [D
 
 ---
 
-## 2. Variables & The Python Memory Model
+## 2. Variables & The Python Memory Model (CPython Internals)
 
-A **variable** is a symbolic name that references an object stored in computer memory.
+A **variable** in Python is not a physical storage box holding data; it is an **object reference (a pointer / name tag)** bound to an object stored in heap memory.
 
-### Static vs. Dynamic Typing
-In statically typed languages (like C++ or Java), you must declare the variable type upfront:
-```cpp
-int userAge = 25; // C++
+```
+Variable Name (Tag in Namespace)              Heap Object in Memory
+[ user_age ] ─────────────────────────► [ Type: int | RefCount: 1 | Value: 25 ]
+                                        [ Memory Address: 0x7FFF98A201 ]
 ```
 
-In Python, typing is **dynamic**. Python infers the type automatically at runtime based on the assigned value:
+### 🔍 Object Identity and the `id()` Function
+Every object created in Python is assigned a unique integer identifier representing its memory address. You can inspect this using `id()`:
+
 ```python
-user_age = 25          # Inferred as int
-user_age = "Twenty-Five" # Rebound to a str (Dynamic rebinding)
+x = 1000
+y = 1000
+print(f"Memory address of x: {id(x)}")
+print(f"Memory address of y: {id(y)}")
+print(f"Do x and y share the exact same memory object? {id(x) == id(y)}") # True or False depending on optimization
 ```
 
+### ⚡ CPython Optimization: Small Integer Caching (-5 to 256)
+CPython pre-allocates and caches an internal array of integer objects in the range **`-5` to `256`** at startup. Any variable assigned a number in this range automatically points to the exact same pre-allocated singleton in memory!
+
+```python
+a = 42
+b = 42
+print(id(a) == id(b)) # ALWAYS True! Both point to Python's cached singleton for 42.
+
+c = 10000
+d = 10000
+print(id(c) == id(d)) # False (in standard REPL; numbers > 256 allocate distinct objects)
 ```
-Variable Name (Tag)         Memory Object
-[ user_age ] ------------> ( Integer: 25 )
+
+### ⚠️ Floating-Point Precision & IEEE 754 Representation
+Python floats are stored as 64-bit binary floating-point numbers following the **IEEE 754 standard**. Because computers represent fractions in binary (base-2), certain decimal fractions cannot be represented exactly:
+
+```python
+print(0.1 + 0.2)          # Output: 0.30000000000000004
+print(0.1 + 0.2 == 0.3)   # Output: False!
 ```
+> [!TIP]
+> **Pro-Tip**: When comparing floats in professional engineering, use `round(a + b, 10) == round(c, 10)` or `math.isclose(a + b, 0.3)` rather than strict `==` equality.
 
 ---
 
@@ -201,6 +224,68 @@ print("=" * 60)
 
 ---
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to build complete confidence with printing, variables, primitive types, arithmetic, and formatted string output:
+
+---
+
+### 🟢 Tier 1: Printing & Basic Variables (Exercises 1–3)
+
+#### 🔹 Exercise 1: Server Banner Formatter
+* **Goal**: Declare variables `host = "web-node-01"`, `port = 8080`, and `status = "ONLINE"`.
+* **Requirement**: Print a single line using `sep=" | "` that outputs `web-node-01 | 8080 | ONLINE`.
+
+#### 🔹 Exercise 2: Continuous Loading Indicator
+* **Goal**: Use two `print()` statements where the first prints `"Connecting to database"` with `end="..."` and the second prints `" [OK]"`.
+
+#### 🔹 Exercise 3: Type Introspection Dashboard
+* **Goal**: Declare one variable of each primitive type (`int`, `float`, `str`, `bool`).
+* **Requirement**: Print the value and its `type()` on separate lines.
+
+---
+
+### 🟡 Tier 2: Arithmetic & Formatting (Exercises 4–6)
+
+#### 🔹 Exercise 4: Precision Financial Rounding
+* **Goal**: Given `cost = 45.892` and `tax = 3.671`, calculate `total = cost + tax`.
+* **Requirement**: Print `total` formatted to 2 decimal places using an f-string (`:.2f`).
+
+#### 🔹 Exercise 5: Thousands Separator Metric
+* **Goal**: Given `annual_requests = 1450289450`, print `"Total Ingested: 1,450,289,450 requests"` using `:,\`.
+
+#### 🔹 Exercise 6: Multi-Column Aligned Table
+* **Goal**: Given 3 items with prices, print a formatted 3-column table (`Item Name`, `Qty`, `Price`) using `<` left, `^` center, and `>` right column alignment specifiers.
+
+---
+
+### 🟠 Tier 3: Memory & Multi-Step Math (Exercises 7–9)
+
+#### 🔹 Exercise 7: Object Identity Inspector
+* **Goal**: Create two variables `n1 = 200` and `n2 = 200`. Print their memory addresses using `id()`.
+* **Requirement**: Verify if their IDs are identical (`id(n1) == id(n2)`).
+
+#### 🔹 Exercise 8: Temperature Converter Script
+* **Goal**: Given `temp_c = 37.5`, calculate `temp_f = (temp_c * 9/5) + 32` and `temp_k = temp_c + 273.15`.
+* **Requirement**: Print a clean 3-line summary formatted to 1 decimal place.
+
+#### 🔹 Exercise 9: Payroll Gross-to-Net Calculator
+* **Goal**: Given `hourly_rate = 35.50`, `hours = 80.0`, `tax_rate = 0.18`, and `health_deduction = 120.00`.
+* **Calculation**:
+  - `gross = hourly_rate * hours`
+  - `tax_amount = gross * tax_rate`
+  - `net_pay = gross - tax_amount - health_deduction`
+* **Requirement**: Print an itemized payroll statement.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Point of Sale (POS) Itemized Checkout Receipt
+* **Goal**: Combine all concepts (variables, types, arithmetic, alignment, formatting) to print an itemized retail receipt.
+
+---
+
 ## 📝 Quick Exercise: Point of Sale (POS) Retail Receipt Generator
 
 ### 🏢 Real-Life Scenario
@@ -243,10 +328,12 @@ FINAL TOTAL:    $283.40
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (POS & 10 Challenges)</b></summary>
 
 ```python
-# 1. Customer & Product Variables
+# =====================================================================
+# SOLUTION: POS Retail Receipt
+# =====================================================================
 customer_name = "Eleanor Vance"
 item_name = "Noise-Cancelling Headphones"
 unit_price = 149.95
@@ -255,11 +342,9 @@ is_loyalty_member = True
 member_discount = 25.00
 shipping_fee = 8.50
 
-# 2. Arithmetic Calculations
 subtotal = unit_price * quantity
 final_total = subtotal - member_discount + shipping_fee
 
-# 3. Formatted POS Receipt Output
 print("==================================================")
 print("              APEX ELECTRONICS POS                ")
 print("==================================================")
@@ -275,10 +360,51 @@ print(f"Shipping Fee:   ${shipping_fee:.2f}")
 print("--------------------------------------------------")
 print(f"FINAL TOTAL:    ${final_total:.2f}")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- We store all transaction facts in typed variables conforming to PEP 8 snake_case.
-- We multiply `unit_price` by `quantity` to get `subtotal`, and adjust for discounts and shipping to compute `final_total`.
-- We use f-strings with `:.2f` float precision format specifiers to display values to standard financial precision.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+host, port, status = "web-node-01", 8080, "ONLINE"
+print(host, port, status, sep=" | ")
+
+# Ex 2:
+print("Connecting to database", end="...")
+print(" [OK]")
+
+# Ex 3:
+age, pi, name, active = 25, 3.1415, "Alice", True
+print(f"{age}: {type(age)}", f"{pi}: {type(pi)}", f"{name}: {type(name)}", f"{active}: {type(active)}", sep="\n")
+
+# Ex 4:
+cost, tax = 45.892, 3.671
+total = cost + tax
+print(f"Total: ${total:.2f}")
+
+# Ex 5:
+annual_requests = 1450289450
+print(f"Total Ingested: {annual_requests:,} requests")
+
+# Ex 6:
+print(f"{'Item Name':<15} | {'Qty':^5} | {'Price':>8}")
+print("-" * 34)
+print(f"{'Mouse':<15} | {2:^5} | {f'${25.00:.2f}':>8}")
+
+# Ex 7:
+n1, n2 = 200, 200
+print(f"ID n1: {id(n1)}, ID n2: {id(n2)}, Same Object: {id(n1) == id(n2)}")
+
+# Ex 8:
+temp_c = 37.5
+temp_f = (temp_c * 9/5) + 32
+temp_k = temp_c + 273.15
+print(f"Celsius: {temp_c:.1f}°C\nFahrenheit: {temp_f:.1f}°F\nKelvin: {temp_k:.1f}K")
+
+# Ex 9:
+hourly_rate, hours, tax_rate, health_deduction = 35.50, 80.0, 0.18, 120.00
+gross = hourly_rate * hours
+tax_amount = gross * tax_rate
+net_pay = gross - tax_amount - health_deduction
+print(f"Gross: ${gross:.2f} | Tax: ${tax_amount:.2f} | Net: ${net_pay:.2f}")
+```
 </details>

@@ -85,25 +85,83 @@ readings_f = [(c * 9/5) + 32 for c in clean_readings]
 
 ---
 
-## 4. Tuples: Immutable Sequences & Unpacking
+---
 
-A **tuple** is an immutable sequence defined with parentheses `( )`. Once initialized, its elements **cannot** be added, modified, or removed.
+## 5. CPython List Internals & Memory Architecture
 
-### Why use Tuples over Lists?
-1. **Data Integrity**: Guarantees fixed records (e.g. `(latitude, longitude)` or database row records) cannot be accidentally altered.
-2. **Performance & Memory**: Tuples consume less memory and allocate faster than dynamic lists.
+Under the hood in CPython, a `list` is implemented as a **contiguous array of pointers to `PyObject` items** (not the raw objects themselves).
+
+```
+Python list variable [ nums ] ──► [ PyListObject Header | Capacity: 8 | Size: 3 ]
+                                  [ Ptr 0 ] ──► [ PyObject: 10 ]
+                                  [ Ptr 1 ] ──► [ PyObject: 20 ]
+                                  [ Ptr 2 ] ──► [ PyObject: 30 ]
+                                  [ Ptr 3 ] ──► (Empty pre-allocated slot)
+```
+
+### ⚡ Geometric Over-Allocation Strategy
+When you `.append()` items to a list and its capacity is exceeded, CPython resizes the underlying array with a growth factor (`0, 4, 8, 16, 25, 35, 46, 58, 72, 88...`). This ensures `.append()` runs in **amortized $O(1)$ constant time**!
+
+### 📊 Time Complexity Reference Table for Lists
+
+| Operation | Syntax / Method | Average Time Complexity | Note |
+| :--- | :--- | :---: | :--- |
+| **Index Access / Update** | `lst[i]`, `lst[i] = x` | **$O(1)$** | Direct pointer offset calculation |
+| **Append to End** | `lst.append(x)` | **$O(1)$** amortized | Inserts into pre-allocated slot |
+| **Pop from End** | `lst.pop()` | **$O(1)$** | Just decrements size counter |
+| **Insert / Delete at Index 0** | `lst.insert(0, x)`, `lst.pop(0)` | **$O(N)$** | Must shift all $N$ pointers right/left |
+| **Membership Search** | `x in lst` | **$O(N)$** | Linear scan from index 0 to $N-1$ |
+| **Sorting** | `lst.sort()` | **$O(N \log N)$** | Timsort algorithm |
+
+---
+
+## 6. Shallow Copy vs. Deep Copy & The Nested List Trap
+
+### ⚠️ The Nested List Multiplication Trap
+```python
+# ❌ DANGEROUS BUG: Creates 3 references to the EXACT SAME inner list object!
+grid_bad = [[0] * 3] * 3
+grid_bad[0][0] = 99
+print(grid_bad) # Output: [[99, 0, 0], [99, 0, 0], [99, 0, 0]] (All rows changed!)
+
+# ✅ CORRECT: Use a list comprehension to allocate 3 independent inner lists:
+grid_good = [[0] * 3 for _ in range(3)]
+grid_good[0][0] = 99
+print(grid_good) # Output: [[99, 0, 0], [0, 0, 0], [0, 0, 0]] (Isolated!)
+```
+
+### 🛡️ Shallow vs. Deep Copying
+- **Shallow Copy (`lst.copy()`, `lst[:]`)**: Copies the outer container pointers, but nested objects still share memory.
+- **Deep Copy (`copy.deepcopy(lst)`)**: Recursively copies all nested objects at all depths.
 
 ```python
-# Fixed geographic coordinate tuple:
-server_location = (37.7749, -122.4194, "San Francisco DC-1")
+import copy
 
-# Tuple Unpacking (Destructuring):
-lat, lon, facility_name = server_location
-print(f"DC Name: {facility_name} (Lat: {lat}, Lon: {lon})")
+original = [1, [2, 3]]
+shallow = original.copy()
+deep = copy.deepcopy(original)
 
-# Swapping two variables in a single line using tuple packing/unpacking:
-x, y = 10, 20
-x, y = y, x   # x is now 20, y is now 10!
+original[1][0] = 999
+print("Original:", original) # [1, [999, 3]]
+print("Shallow: ", shallow)  # [1, [999, 3]] (Inner list was shared!)
+print("Deep:    ", deep)     # [1, [2, 3]]   (Completely isolated!)
+```
+
+---
+
+## 7. Namedtuples: Self-Documenting Lightweight Tuples
+
+When you want the immutability and memory performance of tuples with attribute-based access like an object:
+
+```python
+from collections import namedtuple
+
+# Define a lightweight record blueprint:
+ServerNode = namedtuple("ServerNode", ["hostname", "ip", "cores", "ram_gb"])
+
+node = ServerNode("prod-db-01", "10.0.0.1", 32, 128.0)
+print(node.hostname) # "prod-db-01" (Clean dot notation!)
+print(node[1])       # "10.0.0.1" (Also indexable!)
 ```
 
 ---
@@ -184,6 +242,67 @@ print("=" * 70)
 
 ---
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master dynamic lists, slicing, list comprehensions, tuples, unpacking, memory copy patterns, and statistical aggregations:
+
+---
+
+### 🟢 Tier 1: List Operations & Basic Slicing (Exercises 1–3)
+
+#### 🔹 Exercise 1: Task Queue FIFO/LIFO Simulator
+* **Goal**: Initialize `queue = []`.
+* **Operations**: Append `"Task 1"`, `"Task 2"`, `"Task 3"`. Pop the first item using `.pop(0)`, then pop the last item using `.pop()`. Print remaining queue.
+
+#### 🔹 Exercise 2: Sequence Slicing Extractor
+* **Goal**: Given `data = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]`.
+* **Extract**: (1) First 3 items, (2) Last 3 items, (3) Every second item, (4) Reversed list. Print each slice.
+
+#### 🔹 Exercise 3: In-Place Sorting & Reversal
+* **Goal**: Given `grades = [78.5, 92.0, 64.0, 88.5, 99.0]`.
+* **Requirement**: Sort ascending using `.sort()`, then reverse in-place using `.reverse()`. Print highest and lowest using index `[0]` and `[-1]`.
+
+---
+
+### 🟡 Tier 2: Comprehensions & Tuples (Exercises 4–6)
+
+#### 🔹 Exercise 4: Conditional List Comprehension Filter
+* **Goal**: Given `temperatures = [28.5, -999.0, 32.0, 31.5, -999.0, 29.0]`.
+* **Requirement**: Use a list comprehension to filter out missing sensor codes (`-999.0`) and convert remaining to Fahrenheit: `[(c * 9/5) + 32 for c in temperatures if c != -999.0]`.
+
+#### 🔹 Exercise 5: Multi-Variable Tuple Unpacking & Swapping
+* **Goal**: Given `server_record = ("192.168.1.1", 8080, "PRODUCTION", True)`.
+* **Requirement**: Unpack into `ip`, `port`, `env`, `is_active`. Swap `ip` and `env` in one line (`ip, env = env, ip`).
+
+#### 🔹 Exercise 6: Deduplication Preserving Order
+* **Goal**: Given `logs = ["user_login", "page_view", "user_login", "checkout", "page_view"]`.
+* **Requirement**: Create a new list containing unique events in the order they first appeared.
+
+---
+
+### 🟠 Tier 3: Memory Models & Multi-Dimensional Lists (Exercises 7–9)
+
+#### 🔹 Exercise 7: Deep Copy vs Shallow Copy Inspector
+* **Goal**: Given nested list `team = [["Alice", 90], ["Bob", 85]]`.
+* **Requirement**: Create a shallow copy with `.copy()` and a deep copy with `copy.deepcopy()`. Modify the inner score of `"Alice"` in the original. Demonstrate how shallow is affected while deep remains isolated.
+
+#### 🔹 Exercise 8: Matrix Transposition with Comprehensions
+* **Goal**: Given a $3 \times 3$ grid `matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]`.
+* **Requirement**: Use a nested list comprehension `[[row[i] for row in matrix] for i in range(3)]` to compute the transposed matrix.
+
+#### 🔹 Exercise 9: Namedtuple Financial Portfolio Analyzer
+* **Goal**: Use `namedtuple("Asset", ["symbol", "shares", "price"])`.
+* **Requirement**: Create 3 asset records, calculate total portfolio value `sum(a.shares * a.price for a in portfolio)`, and print formatted summary.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Classroom Grade Registry & Ranked Leaderboard
+* **Goal**: Interactively ingest student tuples `(name, score)`, calculate class mean/min/max, filter honor roll and failing lists with comprehensions, and print a sorted leaderboard.
+
+---
+
 ## 📝 Quick Exercise: Academic Class Grade Registry & Performance Analyzer
 
 ### 🏢 Real-Life Scenario
@@ -248,10 +367,12 @@ RANKED LEADERBOARD:
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Grade Analytics & 10 Challenges)</b></summary>
 
 ```python
-# 1. Interactive Collection Loop (Lessons 1-6)
+# =====================================================================
+# SOLUTION: Classroom Grade Analytics
+# =====================================================================
 student_records = []
 
 while True:
@@ -268,7 +389,6 @@ while True:
     else:
         print("❌ Score must be between 0 and 100.")
 
-# 2. Extract Scores and Compute Metrics (Lesson 6)
 scores_list = [score for _, score in student_records]
 
 total_students = len(student_records)
@@ -279,10 +399,8 @@ lowest_score = min(scores_list)
 honor_students = [name for name, score in student_records if score >= 90.0]
 failing_students = [name for name, score in student_records if score < 60.0]
 
-# 3. Sort Descending by Score (Lesson 6)
 sorted_records = sorted(student_records, key=lambda x: x[1], reverse=True)
 
-# 4. Formatted Display Output (Lessons 1 & 6)
 print("\n==================================================")
 print("           CLASSROOM GRADE ANALYTICS              ")
 print("==================================================")
@@ -305,10 +423,61 @@ for rank, (name, score) in enumerate(sorted_records, start=1):
     print(f"  #{rank}: {name:<20} - {score:.2f}%{tag}")
 
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `student_records` collects `(name, score)` tuples dynamically during a `while` loop.
-- List comprehensions extract score lists and filter students based on performance thresholds.
-- `sorted(..., key=lambda x: x[1], reverse=True)` orders students by highest score for the leaderboard.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+queue = []
+queue.extend(["Task 1", "Task 2", "Task 3"])
+first = queue.pop(0)
+last = queue.pop()
+print(f"Popped First: {first}, Popped Last: {last}, Remaining: {queue}")
+
+# Ex 2:
+data = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+print(f"First 3: {data[:3]}, Last 3: {data[-3:]}, Every 2nd: {data[::2]}, Rev: {data[::-1]}")
+
+# Ex 3:
+grades = [78.5, 92.0, 64.0, 88.5, 99.0]
+grades.sort()
+grades.reverse()
+print(f"High: {grades[0]}, Low: {grades[-1]}")
+
+# Ex 4:
+temperatures = [28.5, -999.0, 32.0, 31.5, -999.0, 29.0]
+temps_f = [(c * 9/5) + 32 for c in temperatures if c != -999.0]
+print(f"Temps (F): {temps_f}")
+
+# Ex 5:
+server_rec = ("192.168.1.1", 8080, "PRODUCTION", True)
+ip, port, env, is_active = server_rec
+ip, env = env, ip
+print(f"Swapped: ip={ip}, env={env}")
+
+# Ex 6:
+logs = ["user_login", "page_view", "user_login", "checkout", "page_view"]
+seen = set()
+unique_logs = [x for x in logs if not (x in seen or seen.add(x))]
+print(f"Unique Ordered: {unique_logs}")
+
+# Ex 7:
+import copy
+team = [["Alice", 90], ["Bob", 85]]
+shallow, deep = team.copy(), copy.deepcopy(team)
+team[0][1] = 100
+print(f"Shallow Alice Score: {shallow[0][1]}, Deep Alice Score: {deep[0][1]}")
+
+# Ex 8:
+matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+transposed = [[row[i] for row in matrix] for i in range(3)]
+print(f"Transposed: {transposed}")
+
+# Ex 9:
+from collections import namedtuple
+Asset = namedtuple("Asset", ["symbol", "shares", "price"])
+portfolio = [Asset("AAPL", 50, 180.0), Asset("GOOGL", 20, 140.0), Asset("NVDA", 30, 450.0)]
+tot_val = sum(a.shares * a.price for a in portfolio)
+print(f"Portfolio Total Value: ${tot_val:,.2f}")
+```
 </details>

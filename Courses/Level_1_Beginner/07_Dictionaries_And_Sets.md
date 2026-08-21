@@ -97,35 +97,62 @@ print(unique_emails) # {'alice@co.com', 'bob@co.com', 'carol@co.com'}
 
 # 2. Set mutations:
 unique_emails.add("dave@co.com")
-unique_emails.remove("carol@co.com")    # Raises KeyError if missing
-unique_emails.discard("missing@co.com") # Safe: does not raise error if absent
+---
+
+## 6. CPython Hash Table Internals & Key Hashability
+
+Under the hood, both `dict` and `set` are implemented as **hash tables**. 
+
 ```
+Key String: "alice@co.com" ──► hash("alice@co.com") ──► 7349182348123 ──► Bucket Index: 3
+[ Bucket 3 ] ──► Stores Pointer to {"alice@co.com": "User Object"}
+```
+
+### 🔑 Why Must Keys Be Hashable (Immutable)?
+A dictionary key must never change its hash value during its lifetime. 
+- **Hashable Types (Valid Keys)**: `str`, `int`, `float`, `tuple`, `frozenset`, `bool`.
+- **Unhashable Types (Invalid Keys)**: `list`, `dict`, `set` (modifying their contents would change their hash and break the lookup table!).
+
+```python
+# ❌ TypeError: unhashable type: 'list'
+# bad_dict = {[1, 2]: "coordinates"}
+
+# ✅ CORRECT: Use an immutable tuple as key:
+good_dict = {(1, 2): "coordinates"}
+```
+
+### ⚡ Python 3.7+ Compact Dict Layout
+Since Python 3.7, dictionaries maintain **key insertion order** while consuming up to 25% less memory by splitting storage into a dense entries array and a sparse indices table.
 
 ---
 
-## 5. Mathematical Set Algebra Operations
+## 7. Modern Dictionary Operators (`|` and `|=`) & `collections` Helpers
 
-Sets excel at comparing groups and calculating overlapping permissions, shared assets, or differential security access:
+### 1. Dictionary Merge Operators (Python 3.9+)
+Merge two dictionaries into a new one using `|`, or update in place with `|=`:
 
 ```python
-dev_team = {"Alice", "Bob", "Charlie", "David"}
-ops_team = {"Charlie", "David", "Eve", "Frank"}
+default_config = {"host": "localhost", "port": 8000, "debug": False}
+custom_config  = {"port": 9000, "debug": True, "ssl": True}
 
-# 1. Union (|): All members across both teams
-all_engineers = dev_team | ops_team
-# {'Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank'}
+# Merge creates a new dict with custom values overriding defaults:
+merged_config = default_config | custom_config
+print(merged_config)
+# {'host': 'localhost', 'port': 9000, 'debug': True, 'ssl': True}
+```
 
-# 2. Intersection (&): Members in BOTH teams (DevOps engineers)
-devops_members = dev_team & ops_team
-# {'Charlie', 'David'}
+### 2. `collections.defaultdict` and `collections.Counter`
+```python
+from collections import defaultdict, Counter
 
-# 3. Difference (-): Members in dev_team who are NOT in ops_team
-pure_devs = dev_team - ops_team
-# {'Alice', 'Bob'}
+# defaultdict eliminates KeyError and .get(k, 0) boilerplate:
+tally = defaultdict(int)
+for word in ["apple", "banana", "apple"]:
+    tally[word] += 1
 
-# 4. Symmetric Difference (^): Members in either dev OR ops, but NOT in both
-specialized_only = dev_team ^ ops_team
-# {'Alice', 'Bob', 'Eve', 'Frank'}
+# Counter counts frequency automatically:
+counts = Counter(["apple", "banana", "apple", "orange", "apple"])
+print(counts.most_common(1)) # [('apple', 3)]
 ```
 
 ---
@@ -226,6 +253,66 @@ print("=" * 70)
 
 ---
 
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master dictionaries, safe lookups, dictionary comprehensions, sets, set algebra, and compact hash table structures:
+
+---
+
+### 🟢 Tier 1: Dictionary CRUD & Safe Access (Exercises 1–3)
+
+#### 🔹 Exercise 1: Contact Directory Manager
+* **Goal**: Create `contacts = {"alice": "555-0100", "bob": "555-0101"}`.
+* **Operations**: Add `"charlie": "555-0102"`, update `"alice"`'s phone, and query `"david"` safely using `.get("david", "Not Found")`.
+
+#### 🔹 Exercise 2: Word Frequency Counter (Classic Mapping)
+* **Goal**: Given word list `words = ["apple", "banana", "apple", "orange", "banana", "apple"]`.
+* **Requirement**: Use a `for` loop with `tally[w] = tally.get(w, 0) + 1` to generate a frequency dictionary.
+
+#### 🔹 Exercise 3: Key/Value View Iteration
+* **Goal**: Given `rates = {"USD": 1.0, "EUR": 0.92, "GBP": 0.79, "JPY": 155.0}`.
+* **Requirement**: Use a `for currency, rate in rates.items():` loop to print each formatted rate.
+
+---
+
+### 🟡 Tier 2: Comprehensions & Set Operations (Exercises 4–6)
+
+#### 🔹 Exercise 4: Dictionary Price Discount Comprehension
+* **Goal**: Given `catalog = {"laptop": 1200, "mouse": 25, "keyboard": 75, "monitor": 300}`.
+* **Requirement**: Use a dict comprehension to apply a 15% discount only to items with price $> \$50$: `{k: round(v*0.85, 2) for k, v in catalog.items() if v > 50}`.
+
+#### 🔹 Exercise 5: Set Algebra Permission Auditor
+* **Goal**: Given `user_perms = {"read", "write", "upload"}` and `admin_perms = {"read", "write", "delete", "grant_access"}`.
+* **Calculation**: Find (1) shared permissions (`&`), (2) missing admin permissions (`admin_perms - user_perms`), (3) all unique combined permissions (`|`).
+
+#### 🔹 Exercise 6: Inverted Dictionary (Value-to-Key Mapping)
+* **Goal**: Given `user_to_id = {"alice": 101, "bob": 102, "charlie": 103}`.
+* **Requirement**: Use a dictionary comprehension to swap keys and values: `{v: k for k, v in user_to_id.items()}`.
+
+---
+
+### 🟠 Tier 3: Nested Mappings & Modern Operators (Exercises 7–9)
+
+#### 🔹 Exercise 7: Nested Employee Roster Deep Query
+* **Goal**: Given `company = {"eng": {"lead": "Alice", "staff": 8}, "sales": {"lead": "Bob", "staff": 14}}`.
+* **Requirement**: Add `"finance": {"lead": "Carol", "staff": 4}`, and calculate the total company staff count using a generator expression inside `sum()`.
+
+#### 🔹 Exercise 8: Config Merge with `|` Operator (Python 3.9+)
+* **Goal**: Given `default_env = {"debug": False, "timeout": 30, "threads": 4}` and `override_env = {"debug": True, "threads": 8}`.
+* **Requirement**: Merge using `merged = default_env | override_env`. Print final configuration.
+
+#### 🔹 Exercise 9: Frequency Top-K Analysis with `collections.Counter`
+* **Goal**: Given a long text passage, tokenize into words and use `Counter(words).most_common(3)` to find the top 3 most frequent words.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Warehouse Inventory Valuation & Restock Dispatcher
+* **Goal**: Nested dictionary inventory database, set difference comparison against vendor master catalog, reorder threshold alerts, and valuation metrics.
+
+---
+
 ## 📝 Quick Exercise: E-Commerce Inventory Stock & Category Reorder Hub
 
 ### 🏢 Real-Life Scenario
@@ -276,10 +363,12 @@ NEW VENDOR PRODUCTS AVAILABLE TO CARRY (Set Difference):
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Inventory & 10 Challenges)</b></summary>
 
 ```python
-# 1. Inventory Database & Vendor Sets (Lessons 1-7)
+# =====================================================================
+# SOLUTION: Warehouse Inventory & Reorder Report
+# =====================================================================
 inventory_db = {
     "SKU-01": {"name": "4K Gaming Monitor", "category": "Electronics", "stock": 14, "cost": 349.99, "reorder_at": 10},
     "SKU-02": {"name": "Mechanical Keyboard", "category": "Accessories", "stock": 4, "cost": 89.50, "reorder_at": 15},
@@ -291,14 +380,10 @@ inventory_db = {
 vendor_skus = {"SKU-01", "SKU-02", "SKU-03", "SKU-04", "SKU-05", "SKU-06", "SKU-07"}
 internal_skus = set(inventory_db.keys())
 
-# 2. Set Difference (Lesson 7)
 new_vendor_products = vendor_skus - internal_skus
-
-# 3. Analytics & Aggregations (Lessons 6 & 7)
 total_warehouse_value = sum(item["stock"] * item["cost"] for item in inventory_db.values())
 categories = sorted({item["category"] for item in inventory_db.values()})
 
-# 4. Formatted Report Display (Lessons 1 & 7)
 print("==================================================")
 print("        WAREHOUSE INVENTORY & REORDER REPORT      ")
 print("==================================================")
@@ -319,10 +404,61 @@ for sku in sorted(new_vendor_products):
     print(f"  - {sku}")
 
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `inventory_db` maps SKU strings to nested dictionaries holding product properties.
-- `vendor_skus - internal_skus` performs a set difference to isolate uncarried catalog items.
-- A dictionary value comprehension calculates the aggregate financial value of stored physical inventory.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1:
+contacts = {"alice": "555-0100", "bob": "555-0101"}
+contacts["charlie"] = "555-0102"
+contacts["alice"] = "555-9999"
+print("David:", contacts.get("david", "Not Found"))
+
+# Ex 2:
+words = ["apple", "banana", "apple", "orange", "banana", "apple"]
+tally = {}
+for w in words: tally[w] = tally.get(w, 0) + 1
+print(f"Tally: {tally}")
+
+# Ex 3:
+rates = {"USD": 1.0, "EUR": 0.92, "GBP": 0.79, "JPY": 155.0}
+for curr, r in rates.items():
+    print(f"1 USD = {r} {curr}")
+
+# Ex 4:
+catalog = {"laptop": 1200, "mouse": 25, "keyboard": 75, "monitor": 300}
+disc = {k: round(v * 0.85, 2) for k, v in catalog.items() if v > 50}
+print(f"Discounted: {disc}")
+
+# Ex 5:
+user_perms = {"read", "write", "upload"}
+admin_perms = {"read", "write", "delete", "grant_access"}
+print(f"Shared: {user_perms & admin_perms}")
+print(f"Missing Admin: {admin_perms - user_perms}")
+print(f"All Unique: {user_perms | admin_perms}")
+
+# Ex 6:
+user_to_id = {"alice": 101, "bob": 102, "charlie": 103}
+id_to_user = {v: k for k, v in user_to_id.items()}
+print(f"Inverted: {id_to_user}")
+
+# Ex 7:
+company = {"eng": {"lead": "Alice", "staff": 8}, "sales": {"lead": "Bob", "staff": 14}}
+company["finance"] = {"lead": "Carol", "staff": 4}
+total_staff = sum(dept["staff"] for dept in company.values())
+print(f"Total Staff: {total_staff}")
+
+# Ex 8:
+default_env = {"debug": False, "timeout": 30, "threads": 4}
+override_env = {"debug": True, "threads": 8}
+merged = default_env | override_env
+print(f"Merged Config: {merged}")
+
+# Ex 9:
+from collections import Counter
+txt = "python is fast and python is readable and python is powerful"
+top3 = Counter(txt.split()).most_common(3)
+print(f"Top 3 Words: {top3}")
+```
 </details>
+

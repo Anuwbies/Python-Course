@@ -68,23 +68,125 @@ async def get_item(item_id: str):
 
 ---
 
-## 3. Dependency Injection with `Depends`
+---
 
-FastAPI's Dependency Injection system lets endpoints declare shared dependencies (such as authentication tokens, database sessions, or rate-limiters) cleanly:
+## 4. Pydantic v2 Core: `@field_validator` & `@model_validator`
+
+Pydantic v2 rewritten in Rust (`pydantic-core`) is up to $20\times$ faster than v1:
 
 ```python
-from fastapi import Header, Depends, HTTPException
+from pydantic import BaseModel, field_validator, model_validator
 
-async def verify_auth_token(x_api_token: str = Header(...)):
-    """Reusable dependency verifying API token header."""
-    if x_api_token != "secret_live_key_99":
-        raise HTTPException(status_code=401, detail="Invalid API Credentials")
-    return {"user_id": "USR-99", "tier": "ENTERPRISE"}
+class UserSignupSchema(BaseModel):
+    username: str
+    password: str
+    confirm_password: str
 
-@app.get("/secure/metrics")
-async def get_protected_metrics(auth_context: dict = Depends(verify_auth_token)):
-    return {"msg": f"Welcome {auth_context['user_id']}", "revenue": 1_250_000.00}
+    @field_validator('username')
+    @classmethod
+    def username_must_be_alphanumeric(cls, v: str) -> str:
+        if not v.isalnum():
+            raise ValueError('Username must contain only letters and numbers.')
+        return v.lower()
+
+    @model_validator(mode='after')
+    def passwords_match(self) -> 'UserSignupSchema':
+        if self.password != self.confirm_password:
+            raise ValueError('Password and confirmation do not match.')
+        return self
 ```
+
+---
+
+## 5. Application Lifespan Events (`lifespan`)
+
+In modern FastAPI, database connections, Redis pools, and ML models are initialized and cleanly terminated using an async context manager **`lifespan`**:
+
+```python
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+
+@asynccontextmanager
+async def app_lifespan(app: FastAPI):
+    # Startup: Connect to DB pool
+    print("🚀 [STARTUP] Initializing connection pools...")
+    yield # API serves requests here
+    # Teardown: Close connection pool
+    print("🛑 [SHUTDOWN] Terminating connection pools...")
+
+app = FastAPI(lifespan=app_lifespan)
+```
+
+---
+
+## 6. Custom HTTP Middleware
+
+```python
+from fastapi import Request
+import time
+
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    process_time = time.perf_counter() - start_time
+    response.headers["X-Process-Time-Ms"] = str(round(process_time * 1000, 2))
+    return response
+```
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master FastAPI routing, Pydantic v2 schemas, dependencies, middleware, and exception handlers:
+
+---
+
+### 🟢 Tier 1: Pydantic Basics & Simple Routes (Exercises 1–3)
+
+#### 🔹 Exercise 1: User Profile Pydantic Schema
+* **Goal**: Build a Pydantic model validating `username`, `email`, and `age >= 18`.
+
+#### 🔹 Exercise 2: Path & Query Parameter Route
+* **Goal**: Write a `@app.get("/users/{user_id}")` endpoint accepting an optional `filter: str` query parameter.
+
+#### 🔹 Exercise 3: HTTP Status Code Management
+* **Goal**: Build a `@app.post("/items")` route returning `201 Created` on success and raising `HTTPException(400)` on duplicate key.
+
+---
+
+### 🟡 Tier 2: Validation & Custom Responses (Exercises 4–6)
+
+#### 🔹 Exercise 4: Custom Field Validator (`@field_validator`)
+* **Goal**: Validate that incoming phone numbers adhere to E.164 international format (`+1...`).
+
+#### 🔹 Exercise 5: Root Model Validator (`@model_validator`)
+* **Goal**: Validate that `start_date < end_date` in a reservation payload.
+
+#### 🔹 Exercise 6: Reusable Auth Dependency (`Depends`)
+* **Goal**: Create a dependency verifying `Authorization: Bearer <token>` and injecting current user dictionary.
+
+---
+
+### 🟠 Tier 3: Lifespans, Middleware & Error Handlers (Exercises 7–9)
+
+#### 🔹 Exercise 7: Global Custom Exception Handler
+* **Goal**: Register an `@app.exception_handler(CustomDomainError)` returning structured JSON error payloads.
+
+#### 🔹 Exercise 8: Latency Audit Middleware
+* **Goal**: Write an HTTP middleware calculating request elapsed time and logging slow requests (>500ms).
+
+#### 🔹 Exercise 9: Async Database Connection Lifespan
+* **Goal**: Implement `lifespan` managing the lifecycle of an async memory dictionary store.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Hospital Appointment Scheduling REST Gateway
+* **Goal**: Build a production-grade asynchronous medical scheduling API with specialty fee calculators and Pydantic validation.
+
+---
 
 ---
 
@@ -272,14 +374,16 @@ You are developing the RESTful API for a regional hospital's outpatient appointm
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Hospital API & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Hospital Appointment Scheduling API
+# =====================================================================
 import asyncio
 from pydantic import BaseModel, Field
 from typing import Literal
 
-# 1. Pydantic Schemas (Level 4)
 class AppointmentBookingRequest(BaseModel):
     patient_name: str = Field(..., min_length=2, max_length=50)
     patient_email: str
@@ -295,7 +399,6 @@ class AppointmentResponse(BaseModel):
     status: Literal["CONFIRMED", "CANCELLED"]
 
 
-# 2. In-Memory Store & Booking Route Logic
 APPOINTMENT_STORE: dict[str, dict] = {}
 appointment_counter = 5000
 
@@ -304,7 +407,6 @@ async def book_appointment(payload: AppointmentBookingRequest) -> AppointmentRes
     appointment_counter += 1
     apt_id = f"APT-{appointment_counter}"
 
-    # Calculate fee based on specialty
     fee = 250.00 if payload.doctor_specialty in {"CARDIOLOGY", "NEUROLOGY"} else 150.00
 
     record = {
@@ -320,7 +422,6 @@ async def book_appointment(payload: AppointmentBookingRequest) -> AppointmentRes
     return AppointmentResponse(**record)
 
 
-# 3. Execution Simulation
 async def main():
     req = AppointmentBookingRequest(
         patient_name="Elena Rostova",
@@ -345,9 +446,53 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-```
 
-**Explanation of the Solution:**
-- `AppointmentBookingRequest` guarantees strictly enumerated medical specialties and valid appointment durations.
-- `AppointmentResponse` formats structured consultation records with accurate calculated fees.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: User Profile Model
+class UserProfile(BaseModel):
+    username: str = Field(..., min_length=3)
+    email: str
+    age: int = Field(..., ge=18)
+
+# Ex 2: Route Params
+# @app.get("/users/{user_id}")
+# async def get_user(user_id: int, filter_str: str | None = None): ...
+
+# Ex 3: Status 201
+# @app.post("/items", status_code=201)
+
+# Ex 4: Field Validator
+from pydantic import field_validator
+class PhoneSchema(BaseModel):
+    phone: str
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v):
+        if not v.startswith("+"): raise ValueError("Must start with +")
+        return v
+
+# Ex 5: Model Validator
+from pydantic import model_validator
+class DateRange(BaseModel):
+    start: int
+    end: int
+    @model_validator(mode="after")
+    def check_range(self):
+        if self.start >= self.end: raise ValueError("start must be < end")
+        return self
+
+# Ex 6: Auth Dependency
+# async def get_current_user(auth: str = Header(...)): ...
+
+# Ex 7: Global Exception Handler
+# @app.exception_handler(ValueError)
+
+# Ex 8: Middleware
+# @app.middleware("http")
+
+# Ex 9: Lifespan
+# @asynccontextmanager async def lifespan(app: FastAPI): yield
+```
 </details>

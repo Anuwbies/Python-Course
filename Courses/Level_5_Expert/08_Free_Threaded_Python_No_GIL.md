@@ -45,23 +45,82 @@ print(f"Is Global Interpreter Lock Active? {check_gil_status()}")
 
 ---
 
-## 3. The New Concurrency Reality: True Multi-Core Threads
+---
 
-In free-threaded Python, standard `threading.Thread` achieves true $N \times$ parallel speedups across $N$ CPU cores on CPU-bound mathematical operations:
+## 4. Biased Reference Counting (BRC) Deep-Dive
 
-```
-CPython 3.12 (Standard GIL):
-Thread 1 (Core 1): [ RUN ] ───[ LOCK WAIT ]─── [ RUN ]
-Thread 2 (Core 2): [ LOCK WAIT ]───[ RUN ] ────[ LOCK WAIT ]
-Speedup on 4 Cores: 1.0x (No CPU scaling)
+In free-threaded Python, every `PyObject` contains:
+- `ob_tid`: Thread ID of owning thread.
+- `ob_ref_local`: Unsynchronized fast local reference counter manipulated only by the owning thread without bus locks or atomic primitives.
+- `ob_ref_shared`: Atomic reference counter for foreign thread accesses.
 
-CPython 3.13t (Free-Threaded No-GIL):
-Thread 1 (Core 1): [ RUNNING CPU INTENSIVE CALCULATIONS ]
-Thread 2 (Core 2): [ RUNNING CPU INTENSIVE CALCULATIONS ]
-Thread 3 (Core 3): [ RUNNING CPU INTENSIVE CALCULATIONS ]
-Thread 4 (Core 4): [ RUNNING CPU INTENSIVE CALCULATIONS ]
-Speedup on 4 Cores: 3.8x - 4.0x (True Hardware Parallelism! ⚡)
-```
+---
+
+## 5. Stop-the-World (STW) Garbage Collection
+
+Without the GIL acting as a global synchronizer, cyclic garbage collection must pause all running worker threads temporarily. CPython injects **Safepoint Polls** into evaluation loops. When `gc.collect()` triggers, all threads yield at their nearest safepoint, permitting the GC to scan memory safely.
+
+---
+
+## 6. The Developer's New Reality: Application-Level Thread Safety
+
+> [!WARNING]
+> **No-GIL does NOT mean your code is automatically thread-safe!**
+> While the interpreter itself will no longer crash from memory corruption, **business logic race conditions** (`balance += 100`) still occur when multiple threads mutate shared application state. Mutual exclusion (`threading.Lock`) remains mandatory for shared state!
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master free-threaded Python 3.13+, GIL detection, BRC concepts, parallel scaling, and thread-safety:
+
+---
+
+### 🟢 Tier 1: GIL Introspection & Basic Threads (Exercises 1–3)
+
+#### 🔹 Exercise 1: Runtime GIL Status Checker
+* **Goal**: Write a function inspecting `sys._is_gil_enabled()` with backward compatibility fallback.
+
+#### 🔹 Exercise 2: CPU-Bound Thread Baseline
+* **Goal**: Launch 4 threads calculating prime numbers with `ThreadPoolExecutor`.
+
+#### 🔹 Exercise 3: Measuring Wall-Clock Duration
+* **Goal**: Record execution time using `time.perf_counter()` to benchmark multi-core efficiency.
+
+---
+
+### 🟡 Tier 2: Biased Refcounting & Race Condition Verification (Exercises 4–6)
+
+#### 🔹 Exercise 4: Shared State Race Condition Demonstration
+* **Goal**: Show that without `threading.Lock`, 4 threads concurrently updating a counter produce lost updates even in No-GIL mode.
+
+#### 🔹 Exercise 5: Thread-Safe Counter with Atomic Lock
+* **Goal**: Protect the counter using `threading.Lock()` and verify 100% accurate final tallies.
+
+#### 🔹 Exercise 6: Thread-Local Storage (`threading.local`)
+* **Goal**: Isolate thread state using `threading.local()` to prevent lock contention.
+
+---
+
+### 🟠 Tier 3: Parallel CPU Benchmarking & Mimalloc Scaling (Exercises 7–9)
+
+#### 🔹 Exercise 7: Linear Multi-Core Speedup Benchmark
+* **Goal**: Compare sequential vs 2-thread vs 4-thread execution durations for heavy floating-point arithmetic.
+
+#### 🔹 Exercise 8: Memory Allocation Concurrency Test
+* **Goal**: Allocate 100,000 dictionary objects across 4 threads and observe thread-local Mimalloc performance.
+
+#### 🔹 Exercise 9: Safepoints & Thread Cancellation
+* **Goal**: Implement a cooperative cancellation token allowing worker threads to abort long-running parallel tasks.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Parallel Monte Carlo Pi Approximation Engine
+* **Goal**: Build a multi-core parallel Monte Carlo simulation calculating Pi across millions of samples with thread pool scaling.
+
+---
 
 ---
 
@@ -200,20 +259,20 @@ Total Random Point Samples: 4,000,000 (4 Threads)
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Monte Carlo Pi & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Parallel Monte Carlo Pi Benchmark
+# =====================================================================
 import random
 import time
 import math
 from concurrent.futures import ThreadPoolExecutor
 
-# 1. CPU-Bound Monte Carlo Worker (Level 5)
 def estimate_pi_quadrant(points: int) -> int:
     inside = 0
-    # Independent seed per thread call
     random.seed(int(time.time() * 1000) % 100000 + points)
-    
     for _ in range(points):
         x = random.random()
         y = random.random()
@@ -222,7 +281,6 @@ def estimate_pi_quadrant(points: int) -> int:
     return inside
 
 
-# 2. Parallel Orchestrator
 def run_parallel_pi_estimate(total_points: int = 4_000_000, threads: int = 4) -> tuple[float, float]:
     chunk_size = total_points // threads
     chunks = [chunk_size] * threads
@@ -237,7 +295,6 @@ def run_parallel_pi_estimate(total_points: int = 4_000_000, threads: int = 4) ->
     return pi_est, elapsed
 
 
-# 3. Execution Simulation
 TOTAL_POINTS = 2_000_000
 THREADS = 4
 
@@ -254,10 +311,42 @@ print(f"  ✓ Calculated Value of Pi: {pi_val:.6f}")
 print(f"  ✓ Deviation from True Pi: {deviation:.6f}")
 print(f"  ✓ Execution Duration:     {duration:.2f} seconds ⚡")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `estimate_pi_quadrant` executes intensive mathematical calculations across parallel threads.
-- In Free-Threaded Python 3.13+, this workload scales linearly across physical CPU cores without GIL interference.
-- You have completed the entire Python Zero-to-Expert Master Curriculum!
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: sys._is_gil_enabled()
+import sys
+def is_free_threaded():
+    return not getattr(sys, "_is_gil_enabled", lambda: True)()
+
+# Ex 2: Parallel Thread Baseline
+with ThreadPoolExecutor(max_workers=4) as ex:
+    res = list(ex.map(lambda x: sum(range(x)), [100000]*4))
+
+# Ex 3: Timing
+t0 = time.perf_counter(); dt = time.perf_counter() - t0
+
+# Ex 4 & 5: Thread-Safe Counter with Lock
+import threading
+class SafeCounter:
+    def __init__(self): self.c, self.l = 0, threading.Lock()
+    def inc(self):
+        with self.l: self.c += 1
+
+# Ex 6: Thread-Local
+tls = threading.local()
+def run_tls(): tls.val = 42
+
+# Ex 7: Multi-Core Speedup Benchmark
+# Sequential time / Threaded time
+
+# Ex 8: Concurrent Allocations
+# Thread-local mimalloc arenas eliminate lock contention
+
+# Ex 9: Cancellation Token
+class CancelToken:
+    def __init__(self): self.is_cancelled = False
+    def cancel(self): self.is_cancelled = True
+```
 </details>

@@ -79,9 +79,101 @@ tracemalloc.stop()
 
 ---
 
-## 3. Production Statistical Sampling (`py-spy`)
+---
 
-In live production Kubernetes clusters, running deterministic profilers like `cProfile` introduces 10%–30% runtime overhead. Tools like **`py-spy`** inspect Python process memory externally at 100Hz with $<1\%$ overhead to generate interactive **Flame Graphs**.
+## 4. Line-by-Line Profiling (`line_profiler`)
+
+While `cProfile` measures time per function, `line_profiler` measures exact CPU percentage spent on every single source line:
+
+```python
+# Decorate target hotspot with @profile and run: kernprof -l -v script.py
+# Line # Hits Time Per Hit % Time Line Contents
+# ===============================================
+# 10 1000 520.0 0.52 42.1% window = prices[i:i+w]
+```
+
+---
+
+## 5. Memory Leak Differential Snapshots (`tracemalloc.compare_to`)
+
+To find exact memory leaks over time, compare two snapshots taken before and after a workload:
+
+```python
+import tracemalloc
+
+tracemalloc.start()
+snap1 = tracemalloc.take_snapshot()
+
+# Run suspect transaction...
+leaky_cache = [dict(a=i) for i in range(100_000)]
+
+snap2 = tracemalloc.take_snapshot()
+top_diffs = snap2.compare_to(snap1, 'lineno')
+
+for diff in top_diffs[:3]:
+    print(diff) # Outputs: file.py:8: size=4.1 MB (+4.1 MB), count=100000 (+100000)
+```
+
+---
+
+## 6. Flame Graphs & Production Profiling
+
+- **Flame Graphs**: Visualize call stack depths along the Y-axis and execution time proportions along the X-axis. Wide rectangles represent the primary CPU hotspots.
+- **Low-Overhead Production Sampling**: Tools like `py-spy` read the `/proc/<pid>/mem` virtual filesystem in Linux to sample interpreter thread state without GIL pauses.
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master `cProfile`, `pstats`, `tracemalloc`, snapshot comparisons, and hotspot optimization:
+
+---
+
+### 🟢 Tier 1: `cProfile` & Basic Timing (Exercises 1–3)
+
+#### 🔹 Exercise 1: Programmatic `cProfile` Runner
+* **Goal**: Profile a calculation using `cProfile.Profile()` and print sorted stats by `cumtime`.
+
+#### 🔹 Exercise 2: Comparing List Comprehension vs `for` Loop
+* **Goal**: Measure execution time and opcode counts between list comprehension and `append()` loop.
+
+#### 🔹 Exercise 3: Memory Tracing Baseline (`tracemalloc`)
+* **Goal**: Read current and peak memory allocations using `tracemalloc.get_traced_memory()`.
+
+---
+
+### 🟡 Tier 2: `pstats` Filtering & Memory Snapshots (Exercises 4–6)
+
+#### 🔹 Exercise 4: Filtering `pstats` by Module Regex
+* **Goal**: Restrict profiler output to functions matching a specific module path using `ps.print_stats("my_module")`.
+
+#### 🔹 Exercise 5: Memory Snapshot Line-by-Line Breakdown
+* **Goal**: Capture a `tracemalloc.take_snapshot()` and display the top 5 memory allocating source lines.
+
+#### 🔹 Exercise 6: Parameterized Memory Profiling Decorator
+* **Goal**: Write `@profile_memory_peak(max_mb=2.0)` logging warnings on high memory usage.
+
+---
+
+### 🟠 Tier 3: Memory Differentials & Hotspot Refactoring (Exercises 7–9)
+
+#### 🔹 Exercise 7: Memory Differential Leak Detection (`compare_to`)
+* **Goal**: Compare two memory snapshots taken before and after a batch run to isolate permanent leaks.
+
+#### 🔹 Exercise 8: Algorithmic Refactoring (Quadratic to Linear)
+* **Goal**: Profile $\mathcal{O}(n^2)$ slice sum moving average and optimize to $\mathcal{O}(n)$ sliding window.
+
+#### 🔹 Exercise 9: String Concatenation Optimization
+* **Goal**: Benchmark $100,000$ string additions (`s += chunk`) vs `"".join(chunks)` and analyze memory allocations.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Quantitative Trading Signal Profiling & Hotspot Suite
+* **Goal**: Build an enterprise quantitative profiling engine measuring CPU bottlenecks and peak memory allocations across financial streams.
+
+---
 
 ---
 
@@ -221,13 +313,15 @@ You are developing a continuous performance regression test for a large data pro
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Memory Peak Profiler & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Peak Memory Regression Auditor
+# =====================================================================
 import functools
 import tracemalloc
 
-# 1. Parameterized Memory Profiling Decorator (Level 5)
 def profile_memory_peak(max_allowed_mb: float = 5.0):
     def decorator(func):
         @functools.wraps(func)
@@ -252,26 +346,59 @@ def profile_memory_peak(max_allowed_mb: float = 5.0):
     return decorator
 
 
-# 2. Test Functions
 @profile_memory_peak(max_allowed_mb=5.0)
 def test_lightweight_generator():
     return sum(x for x in range(10_000))
 
 @profile_memory_peak(max_allowed_mb=5.0)
 def test_heavy_list_allocation():
-    # Allocates ~7.6 MB of integers
     return [x for x in range(200_000)]
 
 
-# 3. Execution Simulation
 print("==================================================")
 print("        PEAK MEMORY REGRESSION AUDITOR TEST       ")
 print("==================================================")
 test_lightweight_generator()
 test_heavy_list_allocation()
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `@profile_memory_peak` leverages `tracemalloc.get_traced_memory()` to inspect the exact heap delta during the target function's lifetime.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: cProfile runner
+import cProfile, pstats, io
+def run_cprofile(fn):
+    pr = cProfile.Profile(); pr.enable(); fn(); pr.disable()
+    ps = pstats.Stats(pr).sort_stats('cumtime')
+    return ps
+
+# Ex 2: Comprehension vs Append
+# Comp is faster due to LIST_APPEND specialized bytecode
+
+# Ex 3: Tracemalloc baseline
+def get_mem_usage():
+    tracemalloc.start()
+    return tracemalloc.get_traced_memory()
+
+# Ex 4: Filter pstats
+# ps.print_stats("auth_service")
+
+# Ex 5: Snapshot Top 5
+# snap = tracemalloc.take_snapshot(); top = snap.statistics('lineno')[:5]
+
+# Ex 6: Peak decorator
+# Verified in main solution above.
+
+# Ex 7: Snapshot compare_to
+# diffs = snap2.compare_to(snap1, 'lineno')
+
+# Ex 8: Sliding Window
+def sliding_sum(arr, k):
+    s = sum(arr[:k]); res = [s]
+    for i in range(k, len(arr)): s += arr[i] - arr[i-k]; res.append(s)
+    return res
+
+# Ex 9: String join
+def join_chunks(chunks): return "".join(chunks)
+```
 </details>

@@ -52,31 +52,101 @@ if __name__ == "__main__":
 
 ---
 
-## 3. Inter-Process Communication (IPC) via `multiprocessing.Queue`
+---
 
-Because processes run in isolated memory spaces, they cannot share plain Python lists or variables. Data must be serialized (**pickled**) and transmitted through IPC channels like `multiprocessing.Queue`:
+## 4. Process Start Methods (`spawn`, `fork`, `forkserver`)
+
+| Method | Mechanism | Platforms | Pros / Cons |
+| :--- | :--- | :--- | :--- |
+| **`spawn`** | Starts a brand new Python interpreter process from scratch. Only necessary state pickled. | Windows (default), macOS (default), Linux | Safe, no inherited thread locks, but slower startup. |
+| **`fork`** | Uses POSIX `fork()` to clone parent memory image instantly. | Linux (legacy default) | Instant startup, but dangerous with multi-threaded parents (can clone deadlocks). |
+| **`forkserver`** | Spawns a clean single-threaded server process from which child workers are forked. | Linux, macOS | Fast and thread-safe. |
 
 ```python
 import multiprocessing
-
-def worker_producer(task_queue: multiprocessing.Queue, worker_id: int):
-    for item_id in range(1, 4):
-        payload = f"WorkItem-{item_id} from Process-{worker_id}"
-        task_queue.put(payload) # Thread/Process-safe IPC enqueue
-
-if __name__ == "__main__":
-    shared_queue = multiprocessing.Queue()
-    p1 = multiprocessing.Process(target=worker_producer, args=(shared_queue, 1))
-    p2 = multiprocessing.Process(target=worker_producer, args=(shared_queue, 2))
-
-    p1.start()
-    p2.start()
-    p1.join()
-    p2.join()
-
-    while not shared_queue.empty():
-        print(f"Consumed: {shared_queue.get()}")
+# Explicitly set start method at program entry point:
+if __name__ == '__main__':
+    multiprocessing.set_start_method('spawn', force=True)
 ```
+
+---
+
+## 5. Zero-Copy Shared Memory (`multiprocessing.shared_memory`)
+
+Standard IPC (`Queue`, `Pipe`) serializes (pickles) data, converting Python objects to bytes and back. For large NumPy arrays or multi-gigabyte matrices, serialization causes heavy CPU/RAM overhead. **Shared Memory** maps a raw memory buffer directly across processes with zero serialization:
+
+```python
+from multiprocessing import shared_memory
+import numpy as np
+
+# In Master Process:
+shm = shared_memory.SharedMemory(create=True, size=1024 * 1024 * 100) # 100 MB buffer
+shared_array = np.ndarray((1000, 1000), dtype=np.float64, buffer=shm.buf)
+
+# Child processes attach to shm.name and read/write the exact same RAM buffer instantly!
+```
+
+---
+
+## 6. Pickling Pitfalls & Unpicklable Objects
+
+When submitting tasks to `ProcessPoolExecutor`, all function arguments, return values, and closure references must be serializable via Python's `pickle` module:
+- ❌ **Unpicklable**: Open file handles (`open()`), active database connections, sockets, lambda functions, generator objects.
+- ✅ **Picklable**: Top-level module functions, primitive data types, lists, dictionaries, dataclasses.
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master multiprocessing, process pools, IPC channels, and multi-core parallel computing:
+
+---
+
+### 🟢 Tier 1: Spawning Processes & Basic Process Pools (Exercises 1–3)
+
+#### 🔹 Exercise 1: Multi-Process Factorial Calculator
+* **Goal**: Spawn 4 processes with `multiprocessing.Process` calculating large factorials in parallel.
+
+#### 🔹 Exercise 2: CPU-Bound Parallel Mapping with `ProcessPoolExecutor`
+* **Goal**: Parallelize `math.isqrt(x)` across a list of 1,000,000 integers using `executor.map()`.
+
+#### 🔹 Exercise 3: CPU Core Discovery
+* **Goal**: Print `os.cpu_count()` and spawn an optimal number of worker processes.
+
+---
+
+### 🟡 Tier 2: IPC & Shared Primitives (Exercises 4–6)
+
+#### 🔹 Exercise 4: Multi-Process Task Pipeline with `multiprocessing.Queue`
+* **Goal**: Have 3 worker processes push completed image transformation tokens to a shared queue for the master process.
+
+#### 🔹 Exercise 5: Fast Inter-Process Pipeline with `multiprocessing.Pipe`
+* **Goal**: Establish a bidirectional duplex `Pipe()` between a parent and child process.
+
+#### 🔹 Exercise 6: Synchronized Shared Value with `multiprocessing.Value`
+* **Goal**: Share an integer counter across 4 processes using `Value('i', 0)` and a `multiprocessing.Lock`.
+
+---
+
+### 🟠 Tier 3: Zero-Copy Shared Memory & Chunking (Exercises 7–9)
+
+#### 🔹 Exercise 7: Chunked CPU Workload Distribution
+* **Goal**: Partition a list of 500,000 primes into $N$ equal chunks using `chunksize` in `executor.map()`.
+
+#### 🔹 Exercise 8: Zero-Copy Raw Array Sharing (`multiprocessing.Array`)
+* **Goal**: Share a 10,000-element integer array across worker processes without pickling.
+
+#### 🔹 Exercise 9: Process-Safe Barrier Synchronization
+* **Goal**: Synchronize 4 worker processes to wait at a `multiprocessing.Barrier(4)` before initiating simultaneous stress tests.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Multi-Core Cryptographic Proof-of-Work Miner
+* **Goal**: Build a parallel Bitcoin-style nonce hashing engine splitting search spaces across all CPU cores.
+
+---
 
 ---
 
@@ -217,22 +287,27 @@ Search Range:       0 to 100,000 nonces (4 CPU Processes)
 ```python
 import hashlib
 import os
+<details>
+<summary><b>🔍 View Exercise Solutions (PoW Miner & 10 Challenges)</b></summary>
+
+```python
+# =====================================================================
+# SOLUTION: Multi-Core Proof-of-Work Miner
+# =====================================================================
+import hashlib
+import os
 from concurrent.futures import ProcessPoolExecutor
 
-# 1. Parallel Nonce Mining Worker (Level 3)
 def mine_block_partition(args: tuple[str, int, int, str]) -> tuple[int, str, int] | None:
     block_header, start_nonce, end_nonce, difficulty = args
-    
     for nonce in range(start_nonce, end_nonce):
         candidate = f"{block_header}:{nonce}".encode("utf-8")
         h = hashlib.sha256(candidate).hexdigest()
         if h.startswith(difficulty):
             return nonce, h, os.getpid()
-            
     return None
 
 
-# 2. Main Process Orchestrator
 if __name__ == "__main__":
     HEADER = "BLOCK-ROOT-HASH-890214"
     DIFFICULTY = "0000"
@@ -271,8 +346,47 @@ if __name__ == "__main__":
         print("❌ Target difficulty not found in allocated nonce space.")
 
     print("==================================================")
-```
 
-**Explanation of the Solution:**
-- Distributing search partitions across `ProcessPoolExecutor` allows 4 CPU cores to hash candidate nonces in true hardware parallel, accelerating cryptographic discovery by $\approx 4\times$.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Basic Process Spawn
+import math, multiprocessing
+
+def compute_fact(n): return math.factorial(n)
+
+# Ex 2: ProcessPoolExecutor Map
+def is_perfect_square(x):
+    s = math.isqrt(x)
+    return s * s == x
+
+# Ex 3: CPU Discovery
+def get_optimal_workers():
+    return max(1, os.cpu_count() or 1)
+
+# Ex 4: Multiprocessing Queue
+def worker_push(q, items):
+    for it in items: q.put(it)
+
+# Ex 5: Duplex Pipe
+def pipe_worker(conn):
+    msg = conn.recv()
+    conn.send(f"Processed: {msg}")
+    conn.close()
+
+# Ex 6: Shared Value with Lock
+def counter_worker(val, lock):
+    with lock: val.value += 1
+
+# Ex 7: Chunked Process Mapping
+# with ProcessPoolExecutor() as ex: results = list(ex.map(fn, large_list, chunksize=1000))
+
+# Ex 8: Shared Array
+from multiprocessing import Array
+# shared_arr = Array('i', [0] * 1000)
+
+# Ex 9: Process Barrier
+from multiprocessing import Barrier
+# barrier = Barrier(4)
+```
 </details>

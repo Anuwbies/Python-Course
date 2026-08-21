@@ -51,24 +51,95 @@ def safe_deposit(amount: float):
 
 ---
 
-## 3. High-Level Thread Pools: `ThreadPoolExecutor`
+---
 
-Rather than manually creating and joining individual `Thread` objects, `concurrent.futures.ThreadPoolExecutor` provides a worker pool with `map()` and `submit()`:
+## 4. Advanced Thread Synchronization Primitives
+
+| Primitive | Class | Behavior |
+| :--- | :--- | :--- |
+| **Mutex Lock** | `threading.Lock()` | Binary mutual exclusion. Only one thread can acquire at a time. |
+| **Reentrant Lock** | `threading.RLock()` | Can be acquired multiple times by the *same* owning thread without deadlocking itself. |
+| **Semaphore** | `threading.Semaphore(n)` | Allows up to $N$ concurrent worker threads (e.g. limiting outbound database connection pools). |
+| **Event Flag** | `threading.Event()` | Signals boolean broadcast state changes (`event.set()`, `event.wait()`). |
+| **Condition Variable** | `threading.Condition()` | Enables producer-consumer coordination with `wait()` and `notify()`. |
+
+---
+
+## 5. Deadlocks & The Coffman Conditions
+
+A **Deadlock** occurs when two or more threads are permanently blocked waiting for resources held by each other (Thread 1 holds Lock A, waits for Lock B; Thread 2 holds Lock B, waits for Lock A).
+
+### Deadlock Prevention via Global Lock Ordering
+To prevent circular wait deadlocks, always acquire multiple locks in a deterministic global order (e.g. sorted by resource memory address or account ID):
 
 ```python
-from concurrent.futures import ThreadPoolExecutor
-import time
-
-def fetch_api_endpoint(endpoint_id: int) -> str:
-    time.sleep(0.1) # Simulate network latency
-    return f"Response from API #{endpoint_id}"
-
-# Execute 5 concurrent worker threads:
-with ThreadPoolExecutor(max_workers=5) as executor:
-    results = executor.map(fetch_api_endpoint, range(1, 6))
-    for res in results:
-        print(res)
+# Acquire locks in sorted key order to guarantee deadlock-free execution:
+first_lock, second_lock = (lock_a, lock_b) if id(lock_a) < id(lock_b) else (lock_b, lock_a)
+with first_lock:
+    with second_lock:
+        perform_atomic_transfer()
 ```
+
+---
+
+## 6. Daemon vs Non-Daemon Threads
+
+- **Non-Daemon (Default)**: The main Python process will wait for all non-daemon threads to finish before exiting.
+- **Daemon (`thread.daemon = True`)**: Background background worker (e.g. heartbeat ping sender) that is abruptly killed when the main thread terminates.
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master multithreading, mutexes, thread pools, and race condition prevention:
+
+---
+
+### 🟢 Tier 1: Spawning Threads & Join Basics (Exercises 1–3)
+
+#### 🔹 Exercise 1: Multi-Threaded URL Fetcher
+* **Goal**: Spawn 3 worker threads with `threading.Thread(target=..., args=...)` and join them to complete parallel tasks.
+
+#### 🔹 Exercise 2: Daemon Heartbeat Logger
+* **Goal**: Launch a daemon background thread printing `Ping...` every 0.5s while main thread sleeps for 2s.
+
+#### 🔹 Exercise 3: Thread-Safe Atomic Counter with `threading.Lock`
+* **Goal**: Demonstrate the lost-update race condition bug on a shared integer and fix it using a mutex lock.
+
+---
+
+### 🟡 Tier 2: Thread Pools & Synchronization (Exercises 4–6)
+
+#### 🔹 Exercise 4: Concurrent Image Downloader via `ThreadPoolExecutor`
+* **Goal**: Download 10 simulated image payloads concurrently with `ThreadPoolExecutor(max_workers=4)`.
+
+#### 🔹 Exercise 5: Database Connection Limiter with `threading.Semaphore`
+* **Goal**: Restrict maximum concurrent database queries to 3 using `Semaphore(3)` across 10 threads.
+
+#### 🔹 Exercise 6: Multi-Worker Ready Gate with `threading.Event`
+* **Goal**: Have 5 worker threads wait for `event.wait()` until the main thread initializes config and calls `event.set()`.
+
+---
+
+### 🟠 Tier 3: Producer-Consumer & Deadlock Avoidance (Exercises 7–9)
+
+#### 🔹 Exercise 7: Thread-Safe Producer-Consumer Queue (`queue.Queue`)
+* **Goal**: Implement a bounded multi-producer multi-consumer pipeline using `queue.Queue`, `task_done()`, and `queue.join()`.
+
+#### 🔹 Exercise 8: Recursive Call Protection with `threading.RLock`
+* **Goal**: Demonstrate why standard `Lock()` self-deadlocks inside recursive methods and resolve it with `RLock()`.
+
+#### 🔹 Exercise 9: Dining Philosophers Deadlock Solution
+* **Goal**: Implement the 5 dining philosophers resource allocation problem and eliminate deadlock using strict resource hierarchy ordering.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Thread-Safe Bank Transaction Processor
+* **Goal**: Build a multi-account banking transaction processing engine with deterministic dual-lock acquisition to eliminate race conditions and deadlocks.
+
+---
 
 ---
 
@@ -213,13 +284,15 @@ FINAL RECONCILED BALANCES (Race-Condition Free):
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Bank Processor & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Thread-Safe Bank Transaction Processor
+# =====================================================================
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
-# 1. Thread-Safe Account Class (Level 2 & 3)
 class ThreadSafeAccount:
     def __init__(self, account_id: str, balance: float):
         self.account_id = account_id
@@ -238,11 +311,8 @@ class ThreadSafeAccount:
             return False
 
 
-# 2. Transfer Function
 def transfer_funds(src: ThreadSafeAccount, dst: ThreadSafeAccount, amount: float) -> bool:
-    # Acquire locks in deterministic order to prevent deadlock
     first_lock, second_lock = (src.lock, dst.lock) if src.account_id < dst.account_id else (dst.lock, src.lock)
-    
     with first_lock:
         with second_lock:
             if src.balance >= amount:
@@ -252,7 +322,6 @@ def transfer_funds(src: ThreadSafeAccount, dst: ThreadSafeAccount, amount: float
             return False
 
 
-# 3. Execution Simulation
 acc_a = ThreadSafeAccount("ACC-A", 10_000.00)
 acc_b = ThreadSafeAccount("ACC-B", 10_000.00)
 
@@ -266,7 +335,6 @@ print("--------------------------------------------------")
 print("Dispatching 10 concurrent high-speed wire transfers...")
 
 with ThreadPoolExecutor(max_workers=5) as executor:
-    # 10 concurrent transfers of $200 from A to B
     futures = [executor.submit(transfer_funds, acc_a, acc_b, 200.00) for _ in range(10)]
     for f in futures:
         f.result()
@@ -279,9 +347,64 @@ print(f"  - Account A: ${acc_a.balance:,.2f}")
 print(f"  - Account B: ${acc_b.balance:,.2f}")
 print(f"  - Combined System Liquidity: ${total_system_liquidity:,.2f} (100% Balanced ✅)")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `ThreadSafeAccount` utilizes `threading.Lock()` to serialize read-modify-write state changes.
-- Ordered lock acquisition prevents deadlock when multiple threads transfer between accounts concurrently.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Basic Thread Spawn & Join
+import time
+def task_worker(task_id): time.sleep(0.01)
+threads = [threading.Thread(target=task_worker, args=(i,)) for i in range(3)]
+for t in threads: t.start()
+for t in threads: t.join()
+
+# Ex 2: Daemon Thread
+def heartbeat():
+    while True: time.sleep(0.5)
+d_thread = threading.Thread(target=heartbeat, daemon=True)
+d_thread.start()
+
+# Ex 3: Atomic Counter with Lock
+class AtomicCounter:
+    def __init__(self): self.val, self.lock = 0, threading.Lock()
+    def increment(self):
+        with self.lock: self.val += 1
+
+# Ex 4: ThreadPoolExecutor Fetch
+def fetch_mock(url): return f"Data from {url}"
+with ThreadPoolExecutor(max_workers=4) as ex:
+    data = list(ex.map(fetch_mock, [f"http://api.com/{i}" for i in range(10)]))
+
+# Ex 5: Semaphore Limit
+sem = threading.Semaphore(3)
+def query_db(id):
+    with sem: time.sleep(0.02)
+
+# Ex 6: Event Ready Gate
+ready_event = threading.Event()
+def worker_wait():
+    ready_event.wait()
+# main calls ready_event.set()
+
+# Ex 7: Producer-Consumer Queue
+import queue
+task_q = queue.Queue(maxsize=10)
+def producer():
+    for i in range(5): task_q.put(i)
+def consumer():
+    while True:
+        item = task_q.get()
+        task_q.task_done()
+
+# Ex 8: Recursive RLock
+class RecursiveResource:
+    def __init__(self): self.rlock = threading.RLock()
+    def step_a(self):
+        with self.rlock: self.step_b()
+    def step_b(self):
+        with self.rlock: pass
+
+# Ex 9: Deadlock-Free Ordered Lock Acquisition
+# Solved via global ID-ordered lock acquisition demonstrated in Exercise 10 above.
+```
 </details>

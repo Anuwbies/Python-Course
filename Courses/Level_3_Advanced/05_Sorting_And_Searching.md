@@ -95,13 +95,92 @@ def _merge(left: list[int], right: list[int]) -> list[int]:
 
 ---
 
-## 4. Timsort Internals
+---
 
-Python's built-in `.sort()` and `sorted()` use **Timsort** (created by Tim Peters in 2002 for CPython):
-- **Hybrid Algorithm**: Combines Merge Sort with Insertion Sort.
-- **Adaptive**: Identifies already-sorted subsequences ("natural runs") in raw data.
-- **Stable**: Elements with equal keys preserve their original relative order.
-- **Complexity**: $\mathcal{O}(n)$ best case (already sorted), $\mathcal{O}(n \log n)$ average/worst case.
+## 5. QuickSort & In-Place Partitioning (Lomuto vs Hoare)
+
+QuickSort selects a **pivot** and partitions elements into two sub-arrays (less than pivot vs greater than pivot):
+- **Lomuto Partition**: Simple pointer swap iteration.
+- **Hoare Partition**: Dual two-pointer scans from both ends inward (requires $3\times$ fewer swaps than Lomuto).
+- **Pivot Selection Pitfall**: Choosing `arr[0]` causes catastrophic $\mathcal{O}(n^2)$ degradation on pre-sorted arrays. Production implementations select **Median-of-Three** (`median(first, middle, last)`).
+
+```python
+def quicksort(arr: list[int]) -> list[int]:
+    """In-place or divide-and-conquer QuickSort."""
+    if len(arr) <= 1:
+        return arr
+    pivot = arr[len(arr) // 2]
+    left = [x for x in arr if x < pivot]
+    middle = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    return quicksort(left) + middle + quicksort(right)
+```
+
+---
+
+## 6. Sorting Stability & The $\Omega(n \log n)$ Lower Bound
+
+### 1. Stability
+A sort is **stable** if elements with identical keys maintain their original relative order. In multi-column database queries (e.g. `SORT BY lastName, THEN BY age`), Timsort and Merge Sort guarantee stability; QuickSort and HeapSort do not.
+
+### 2. Comparison Sort Lower Bound
+Any comparison-based sort can be modeled as a binary decision tree with $n!$ leaves. The minimum tree depth is:
+$$\text{Depth} \ge \log_2(n!) = \Omega(n \log n)$$
+To beat $n \log n$, non-comparison algorithms (**Counting Sort**, **Radix Sort**) exploit integer digit properties to achieve **$\mathcal{O}(n + k)$ linear time**.
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master binary search variations, divide-and-conquer sorting, and multi-key ranking:
+
+---
+
+### 🟢 Tier 1: Binary Search Basics & Custom Keys (Exercises 1–3)
+
+#### 🔹 Exercise 1: First and Last Position in Sorted Array
+* **Goal**: Write binary search finding the starting and ending index of a target value in $\mathcal{O}(\log n)$ time.
+
+#### 🔹 Exercise 2: Multi-Key List Sorting with Lambdas
+* **Goal**: Sort a list of employees by department (ascending) and salary (descending) using `sorted(..., key=lambda x: (...))`.
+
+#### 🔹 Exercise 3: Bisect Insertion into Live Sorted Feed
+* **Goal**: Use `bisect.insort` to maintain an ordered stream of stock trade prices dynamically.
+
+---
+
+### 🟡 Tier 2: Search Space Reduction & Rotations (Exercises 4–6)
+
+#### 🔹 Exercise 4: Search in Rotated Sorted Array
+* **Goal**: Search for a target in a sorted array that has been rotated at an unknown pivot in $\mathcal{O}(\log n)$ time.
+
+#### 🔹 Exercise 5: Find Peak Element
+* **Goal**: Find a local maximum element in an array using modified binary search in $\mathcal{O}(\log n)$ time.
+
+#### 🔹 Exercise 6: Integer Square Root via Binary Search
+* **Goal**: Compute $\lfloor\sqrt{x}\rfloor$ for integer $x$ in $\mathcal{O}(\log x)$ time without using `math.sqrt()` or `** 0.5`.
+
+---
+
+### 🟠 Tier 3: Advanced Sorting & Non-Comparison Algorithms (Exercises 7–9)
+
+#### 🔹 Exercise 7: In-Place QuickSort with Hoare Partition
+* **Goal**: Implement in-place QuickSort using two-pointer partitioning without allocating sub-lists.
+
+#### 🔹 Exercise 8: Counting Sort for Bounded Integers
+* **Goal**: Implement Counting Sort sorting an array of 1,000,000 numbers in range $[0, 100]$ in $\mathcal{O}(n + k)$ linear time.
+
+#### 🔹 Exercise 9: Kth Largest Element via Quickselect
+* **Goal**: Find the $K$th largest element in an unsorted array in $\mathcal{O}(n)$ average time using Hoare's Quickselect algorithm.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Securities Exchange Order Book Engine
+* **Goal**: Implement a dual Merge Sort and Binary Search limit order book engine matching incoming market trades at target price levels.
+
+---
 
 ---
 
@@ -220,10 +299,12 @@ BINARY SEARCH LIMIT ORDER LOOKUP ($184.25):
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Order Book & 10 Challenges)</b></summary>
 
 ```python
-# 1. Custom Merge Sort for Order Book (Level 3)
+# =====================================================================
+# SOLUTION: Securities Exchange Order Book Engine
+# =====================================================================
 def merge_sort_orders(orders: list[dict], ascending: bool = True) -> list[dict]:
     if len(orders) <= 1:
         return orders
@@ -249,7 +330,6 @@ def merge_sort_orders(orders: list[dict], ascending: bool = True) -> list[dict]:
     return merged
 
 
-# 2. Binary Search on Sorted Orders (Level 3)
 def binary_search_order(orders: list[dict], target_price: float) -> int:
     left = 0
     right = len(orders) - 1
@@ -259,7 +339,6 @@ def binary_search_order(orders: list[dict], target_price: float) -> int:
         mid_price = orders[mid]["price"]
         if mid_price == target_price:
             return mid
-        # Assuming descending sorted order
         elif mid_price < target_price:
             right = mid - 1
         else:
@@ -267,7 +346,6 @@ def binary_search_order(orders: list[dict], target_price: float) -> int:
     return -1
 
 
-# 3. Execution Run
 raw_bids = [
     {"price": 183.10, "qty": 800},
     {"price": 185.50, "qty": 500},
@@ -294,9 +372,107 @@ else:
     print("  ❌ No order matching target price.")
 
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `merge_sort_orders` sorts financial dictionaries in guaranteed $\mathcal{O}(n \log n)$ time.
-- `binary_search_order` locates specific limit orders in $\mathcal{O}(\log n)$ time over sorted arrays.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: First and Last Position in Sorted Array
+def search_range(nums: list[int], target: int) -> list[int]:
+    def find_bound(is_first):
+        lo, hi, ans = 0, len(nums) - 1, -1
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            if nums[mid] == target:
+                ans = mid
+                if is_first: hi = mid - 1
+                else: lo = mid + 1
+            elif nums[mid] < target: lo = mid + 1
+            else: hi = mid - 1
+        return ans
+    return [find_bound(True), find_bound(False)]
+
+# Ex 2: Multi-Key List Sorting
+employees = [("Eng", 95000), ("Sales", 110000), ("Eng", 120000)]
+sorted_emp = sorted(employees, key=lambda x: (x[0], -x[1]))
+
+# Ex 3: Bisect Insort
+import bisect
+live_feed = [10.5, 12.0, 15.2]
+bisect.insort(live_feed, 11.4)
+
+# Ex 4: Search Rotated Sorted Array
+def search_rotated(nums: list[int], target: int) -> int:
+    lo, hi = 0, len(nums) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if nums[mid] == target: return mid
+        if nums[lo] <= nums[mid]:
+            if nums[lo] <= target < nums[mid]: hi = mid - 1
+            else: lo = mid + 1
+        else:
+            if nums[mid] < target <= nums[hi]: lo = mid + 1
+            else: hi = mid - 1
+    return -1
+
+# Ex 5: Find Peak Element
+def find_peak(nums: list[int]) -> int:
+    lo, hi = 0, len(nums) - 1
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if nums[mid] > nums[mid + 1]: hi = mid
+        else: lo = mid + 1
+    return lo
+
+# Ex 6: Sqrt(x) via Binary Search
+def my_sqrt(x: int) -> int:
+    if x < 2: return x
+    lo, hi, ans = 1, x // 2, 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if mid * mid <= x:
+            ans = mid
+            lo = mid + 1
+        else: hi = mid - 1
+    return ans
+
+# Ex 7: In-Place QuickSort
+def quicksort_inplace(arr, lo=0, hi=None):
+    if hi is None: hi = len(arr) - 1
+    if lo < hi:
+        pivot = arr[hi]
+        i = lo
+        for j in range(lo, hi):
+            if arr[j] < pivot:
+                arr[i], arr[j] = arr[j], arr[i]
+                i += 1
+        arr[i], arr[hi] = arr[hi], arr[i]
+        quicksort_inplace(arr, lo, i - 1)
+        quicksort_inplace(arr, i + 1, hi)
+    return arr
+
+# Ex 8: Counting Sort O(n+k)
+def counting_sort(arr: list[int], max_val: int) -> list[int]:
+    counts = [0] * (max_val + 1)
+    for num in arr: counts[num] += 1
+    res = []
+    for val, count in enumerate(counts):
+        res.extend([val] * count)
+    return res
+
+# Ex 9: Quickselect Kth Largest
+def find_kth_largest(nums: list[int], k: int) -> int:
+    target_idx = len(nums) - k
+    def select(lo, hi):
+        pivot = nums[hi]
+        i = lo
+        for j in range(lo, hi):
+            if nums[j] <= pivot:
+                nums[i], nums[j] = nums[j], nums[i]
+                i += 1
+        nums[i], nums[hi] = nums[hi], nums[i]
+        if i == target_idx: return nums[i]
+        elif i < target_idx: return select(i + 1, hi)
+        else: return select(lo, i - 1)
+    return select(0, len(nums) - 1)
+```
 </details>

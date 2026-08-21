@@ -67,18 +67,115 @@ def bfs_shortest_path(graph: dict, start_node: str, target_node: str) -> list[st
 
 ---
 
-## 3. Dijkstra's Algorithm (Weighted Shortest Path)
+---
 
-Dijkstra's algorithm finds the minimum-weight path from a starting node to all other nodes in a graph with non-negative edge weights using a Min-Heap ($\mathcal{O}((V + E) \log V)$):
+## 4. Directed Acyclic Graphs (DAGs) & Topological Sorting (Kahn's Algorithm)
+
+In build systems (e.g. `make`, Docker multi-stage builds) and package managers (`pip`, `npm`), tasks must execute strictly after their prerequisites. **Topological Sort** provides a linear task ordering:
 
 ```
-1. Initialize distances to all nodes as Infinity (∞); start node distance = 0.
-2. Push (0, start_node) to a Min-Heap.
-3. While the heap is not empty:
-   a. Pop the node with the smallest known distance.
-   b. For each neighbor: if (current_dist + edge_weight) < known_dist[neighbor],
-      update known_dist[neighbor] and push (new_dist, neighbor) to the heap.
+[ Compile C Code ] ──► [ Link Object Files ] ──► [ Generate Binary ]
 ```
+
+```python
+from collections import deque
+
+def topological_sort(dag_graph: dict[str, list[str]]) -> list[str]:
+    """Kahn's Algorithm using in-degree calculation."""
+    in_degrees = {node: 0 for node in dag_graph}
+    for node, neighbors in dag_graph.items():
+        for neighbor in neighbors:
+            in_degrees[neighbor] = in_degrees.get(neighbor, 0) + 1
+
+    # Seed queue with nodes having 0 prerequisites (in-degree == 0):
+    queue = deque([node for node, deg in in_degrees.items() if deg == 0])
+    ordered_tasks = []
+
+    while queue:
+        task = queue.popleft()
+        ordered_tasks.append(task)
+        for neighbor in dag_graph.get(task, []):
+            in_degrees[neighbor] -= 1
+            if in_degrees[neighbor] == 0:
+                queue.append(neighbor)
+
+    if len(ordered_tasks) != len(dag_graph):
+        raise ValueError("Cyclic dependency detected! Cannot topologically sort graph.")
+    return ordered_tasks
+```
+
+---
+
+## 5. Cycle Detection in Directed Graphs (3-Color DFS)
+
+A directed graph contains a cycle if and only if a DFS encounters a node currently in the active recursion call stack:
+- **`WHITE` (0)**: Unvisited node.
+- **`GRAY` (1)**: Currently being explored in the active DFS recursion branch.
+- **`BLACK` (2)**: Fully processed node.
+
+If a DFS edge leads to a `GRAY` node, a **cycle (deadlock)** is confirmed.
+
+---
+
+## 6. A* Search Algorithm vs Dijkstra
+
+While Dijkstra expands uniformly in all directions ($f(n) = g(n)$ where $g(n)$ is the cost from start), **A* Search** adds an admissible heuristic $h(n)$ (e.g., Euclidean or Manhattan distance to goal):
+$$f(n) = g(n) + h(n)$$
+A* focuses exploration directly toward the target, reducing explored nodes by up to $90\%$ in robotics and video game pathfinding.
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master graph representations, BFS/DFS, shortest paths, DAGs, and topological sorting:
+
+---
+
+### 🟢 Tier 1: Adjacency Lists & Basic Traversal (Exercises 1–3)
+
+#### 🔹 Exercise 1: Adjacency List Edge Counter
+* **Goal**: Write `count_total_edges(adj_list: dict) -> int` for both directed and undirected graphs.
+
+#### 🔹 Exercise 2: Breadth-First Search (BFS) Reachability
+* **Goal**: Write `can_reach(graph, start, target) -> bool` using a FIFO queue.
+
+#### 🔹 Exercise 3: Depth-First Search (DFS) Component Size
+* **Goal**: Count the total number of connected nodes reachable from a given start node using recursive DFS.
+
+---
+
+### 🟡 Tier 2: Pathfinding & Cycle Detection (Exercises 4–6)
+
+#### 🔹 Exercise 4: Shortest Path Hop Counter (BFS)
+* **Goal**: Find the exact number of hops between two servers in an unweighted cluster network.
+
+#### 🔹 Exercise 5: Cycle Detection in Undirected Graph
+* **Goal**: Implement cycle detection in an undirected graph using parent pointer tracking in BFS/DFS.
+
+#### 🔹 Exercise 6: Number of Islands (2D Grid Graph DFS)
+* **Goal**: Count connected components of `'1'`s (land) surrounded by `'0'`s (water) in a 2D binary matrix.
+
+---
+
+### 🟠 Tier 3: Weighted Graphs & Topological Sorts (Exercises 7–9)
+
+#### 🔹 Exercise 7: Dijkstra's Single-Source Shortest Path
+* **Goal**: Implement Dijkstra with a Min-Heap returning the shortest path array from a source router.
+
+#### 🔹 Exercise 8: Course Schedule / Dependency Ordering (Topological Sort)
+* **Goal**: Given $N$ courses and prerequisite pairs $[A, B]$, return a valid course completion order using Kahn's algorithm.
+
+#### 🔹 Exercise 9: Word Ladder Transformation Length (BFS)
+* **Goal**: Find the shortest transformation sequence from `beginWord` to `endWord` changing one letter at a time against a dictionary.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Social Network Degree of Separation Engine
+* **Goal**: Build a LinkedIn-style degree-of-separation engine determining 1st, 2nd, and 3rd degree connection paths between users.
+
+---
 
 ---
 
@@ -235,12 +332,14 @@ Connection Chain:     Alice -> Bob -> David -> Frank
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Separation Degree & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Social Network Degree of Separation
+# =====================================================================
 from collections import deque
 
-# 1. Social Network BFS Graph Search (Level 3)
 def find_degrees_of_separation(social_graph: dict, start_user: str, target_user: str) -> tuple[int, list[str]] | None:
     if start_user not in social_graph or target_user not in social_graph:
         return None
@@ -264,7 +363,6 @@ def find_degrees_of_separation(social_graph: dict, start_user: str, target_user:
     return None
 
 
-# 2. Execution Run
 social_network = {
     "Alice": {"Bob", "Charlie"},
     "Bob": {"Alice", "David"},
@@ -293,9 +391,115 @@ else:
     print("❌ No connection exists between users.")
 
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- BFS explores immediate connections (1st degree) before expanding to friends-of-friends (2nd degree).
-- `visited = {start_user}` prevents infinite cyclical looping across bidirectional social links.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Count Total Edges
+def count_edges(adj_list: dict, directed=False) -> int:
+    cnt = sum(len(neighbors) for neighbors in adj_list.values())
+    return cnt if directed else cnt // 2
+
+# Ex 2: BFS Reachability
+def can_reach(graph: dict, start: str, target: str) -> bool:
+    q = deque([start])
+    visited = {start}
+    while q:
+        curr = q.popleft()
+        if curr == target: return True
+        for n in graph.get(curr, []):
+            if n not in visited:
+                visited.add(n)
+                q.append(n)
+    return False
+
+# Ex 3: DFS Connected Component Size
+def component_size(graph: dict, start: str) -> int:
+    visited = set()
+    def dfs(node):
+        visited.add(node)
+        for n in graph.get(node, []):
+            if n not in visited: dfs(n)
+    dfs(start)
+    return len(visited)
+
+# Ex 4: Shortest Path Hop Counter
+def min_hops(graph: dict, src: str, dst: str) -> int:
+    q = deque([(src, 0)])
+    visited = {src}
+    while q:
+        curr, hops = q.popleft()
+        if curr == dst: return hops
+        for n in graph.get(curr, []):
+            if n not in visited:
+                visited.add(n)
+                q.append((n, hops + 1))
+    return -1
+
+# Ex 5: Cycle Detection in Undirected Graph
+def has_cycle_undirected(graph: dict) -> bool:
+    visited = set()
+    def dfs(node, parent):
+        visited.add(node)
+        for neighbor in graph.get(node, []):
+            if neighbor not in visited:
+                if dfs(neighbor, node): return True
+            elif neighbor != parent:
+                return True
+        return False
+    for node in graph:
+        if node not in visited:
+            if dfs(node, None): return True
+    return False
+
+# Ex 6: Number of Islands (2D Grid DFS)
+def num_islands(grid: list[list[str]]) -> int:
+    if not grid: return 0
+    rows, cols = len(grid), len(grid[0])
+    count = 0
+    def dfs(r, c):
+        if r < 0 or r >= rows or c < 0 or c >= cols or grid[r][c] != '1': return
+        grid[r][c] = '0' # Mark visited
+        for dr, dc in [(-1,0), (1,0), (0,-1), (0,1)]: dfs(r + dr, c + dc)
+
+    for r in range(rows):
+        for c in range(cols):
+            if grid[r][c] == '1':
+                count += 1
+                dfs(r, c)
+    return count
+
+# Ex 7: Dijkstra's Algorithm
+import heapq
+def dijkstra(graph: dict, start: str) -> dict:
+    distances = {n: float('inf') for n in graph}
+    distances[start] = 0.0
+    pq = [(0.0, start)]
+    while pq:
+        d, curr = heapq.heappop(pq)
+        if d > distances[curr]: continue
+        for neighbor, weight in graph.get(curr, []):
+            new_d = d + weight
+            if new_d < distances[neighbor]:
+                distances[neighbor] = new_d
+                heapq.heappush(pq, (new_d, neighbor))
+    return distances
+
+# Ex 8: Course Schedule Topological Sort
+def can_finish_courses(num_courses: int, prerequisites: list[list[int]]) -> list[int]:
+    adj = {i: [] for i in range(num_courses)}
+    in_deg = [0] * num_courses
+    for course, prereq in prerequisites:
+        adj[prereq].append(course)
+        in_deg[course] += 1
+    q = deque([i for i in range(num_courses) if in_deg[i] == 0])
+    order = []
+    while q:
+        curr = q.popleft()
+        order.append(curr)
+        for neighbor in adj[curr]:
+            in_deg[neighbor] -= 1
+            if in_deg[neighbor] == 0: q.append(neighbor)
+    return order if len(order) == num_courses else []
+```
 </details>

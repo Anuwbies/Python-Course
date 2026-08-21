@@ -77,27 +77,118 @@ asyncio.run(run_throttled_batch())
 
 ---
 
-## 3. Asynchronous Context Managers (`async with`)
+---
 
-Classes can implement `__aenter__` and `__aexit__` to handle non-blocking asynchronous resource setup and teardown:
+## 4. Modern Python 3.11+ Structured Concurrency: `asyncio.TaskGroup`
+
+Rather than raw `asyncio.gather()`, modern Python provides **`TaskGroup`** ensuring structured concurrency where if any child task fails, all sibling tasks are cleanly cancelled:
 
 ```python
-class AsyncDatabaseClient:
-    async def __aenter__(self):
-        print("Connecting to async database pool...")
-        await asyncio.sleep(0.1) # Non-blocking connection handshake
-        return self
+import asyncio
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        print("Closing async database connection pool...")
-        await asyncio.sleep(0.05)
+async def fetch_item(item_id: int):
+    await asyncio.sleep(0.1)
+    if item_id == 2:
+        raise RuntimeError("Database socket reset!")
+    return f"Item-{item_id}"
 
-async def test_db():
-    async with AsyncDatabaseClient() as db:
-        print("  -> Executing async SQL queries...")
-
-asyncio.run(test_db())
+async def main():
+    try:
+        async with asyncio.TaskGroup() as tg:
+            t1 = tg.create_task(fetch_item(1))
+            t2 = tg.create_task(fetch_item(2))
+    except* RuntimeError as err:
+        print(f"Handled error from TaskGroup: {err.exceptions}")
 ```
+
+---
+
+## 5. Bridging Sync & Async: `asyncio.to_thread`
+
+Calling blocking code (like legacy `time.sleep()`, synchronous `requests.get()`, or disk reads) freezes the entire single-threaded Event Loop. Use **`asyncio.to_thread`** to offload blocking functions to a background thread without stalling other coroutines:
+
+```python
+import asyncio
+import time
+
+def legacy_blocking_disk_read(filepath: str) -> str:
+    time.sleep(1.0) # Blocking synchronous call
+    return "file content"
+
+async def async_worker():
+    # Offloads blocking call to background thread safely:
+    content = await asyncio.to_thread(legacy_blocking_disk_read, "data.csv")
+    print(f"Loaded: {content}")
+```
+
+---
+
+## 6. Timeouts & Deadlines (`asyncio.timeout`)
+
+In Python 3.11+, use `async with asyncio.timeout(seconds):` to cancel slow network tasks:
+
+```python
+async def fetch_with_strict_timeout():
+    try:
+        async with asyncio.timeout(0.5):
+            await slow_network_call()
+    except TimeoutError:
+        print("Network request exceeded 500ms timeout window!")
+```
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master `asyncio`, coroutines, event loops, semaphores, and structured concurrency:
+
+---
+
+### 🟢 Tier 1: Coroutine Basics & `asyncio.gather` (Exercises 1–3)
+
+#### 🔹 Exercise 1: Async Hello World Delay
+* **Goal**: Write a coroutine printing `"Hello"`, waiting non-blockingly with `await asyncio.sleep(1.0)`, and printing `"World"`.
+
+#### 🔹 Exercise 2: Parallel Async Multi-Timer
+* **Goal**: Launch 3 coroutines with different delays (0.2s, 0.4s, 0.6s) using `asyncio.gather()` and record total elapsed time.
+
+#### 🔹 Exercise 3: Creating Background Tasks with `asyncio.create_task`
+* **Goal**: Schedule background coroutines with `asyncio.create_task()` and await them later in the execution flow.
+
+---
+
+### 🟡 Tier 2: Throttling, Queues & Context Managers (Exercises 4–6)
+
+#### 🔹 Exercise 4: Async Semaphore Concurrency Limiter
+* **Goal**: Throttle 20 simulated API calls to at most 4 concurrent active tasks using `asyncio.Semaphore(4)`.
+
+#### 🔹 Exercise 5: Asynchronous Context Manager (`__aenter__` / `__aexit__`)
+* **Goal**: Build an `AsyncResourceLock` managing acquired and released states with async enter and exit.
+
+#### 🔹 Exercise 6: Async Producer-Consumer Queue (`asyncio.Queue`)
+* **Goal**: Implement an async worker pipeline using `asyncio.Queue`, `put()`, `get()`, and `task_done()`.
+
+---
+
+### 🟠 Tier 3: Structured Concurrency & Bridging Sync Code (Exercises 7–9)
+
+#### 🔹 Exercise 7: Structured Task Group (`asyncio.TaskGroup`)
+* **Goal**: Run multiple tasks inside `async with asyncio.TaskGroup()` and observe automatic sibling cancellation on failure.
+
+#### 🔹 Exercise 8: Offloading Blocking I/O with `asyncio.to_thread`
+* **Goal**: Run a CPU-heavy or blocking synchronous function inside an async application using `asyncio.to_thread()`.
+
+#### 🔹 Exercise 9: Async Streaming Generator (`async for`)
+* **Goal**: Build an `async def stream_sensor_readings()` yielding live metrics and consume it using `async for reading in stream:`.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: Ingress Controller Async Health Probe Fleet
+* **Goal**: Build an enterprise Kubernetes ingress health-check monitor with semaphores, latency recording, and aggregate availability auditing.
+
+---
 
 ---
 
@@ -233,15 +324,17 @@ Average Response Time: 184.00 ms
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Health Auditor & 10 Challenges)</b></summary>
 
 ```python
+# =====================================================================
+# SOLUTION: Async Fleet Health Check Auditor
+# =====================================================================
 import asyncio
 
-# 1. Async Probe Coroutine (Level 3)
 async def probe_service_async(sem: asyncio.Semaphore, name: str, latency: float, healthy: bool) -> dict:
     async with sem:
-        await asyncio.sleep(latency) # Non-blocking I/O
+        await asyncio.sleep(latency)
         return {
             "name": name,
             "latency_ms": latency * 1000.0,
@@ -250,15 +343,12 @@ async def probe_service_async(sem: asyncio.Semaphore, name: str, latency: float,
         }
 
 
-# 2. Main Audit Coroutine Orchestrator (Level 3)
 async def run_health_audit(services: list[tuple]) -> None:
-    sem = asyncio.Semaphore(2) # Throttle to 2 concurrent sockets
-    
+    sem = asyncio.Semaphore(2)
     tasks = [
         probe_service_async(sem, name, latency, is_healthy)
         for name, latency, is_healthy in services
     ]
-    
     results = await asyncio.gather(*tasks)
 
     print("==================================================")
@@ -285,7 +375,6 @@ async def run_health_audit(services: list[tuple]) -> None:
     print("==================================================")
 
 
-# 3. Execution Entry Point
 if __name__ == "__main__":
     service_fleet = [
         ("Auth-Service", 0.15, True),
@@ -296,10 +385,55 @@ if __name__ == "__main__":
     ]
 
     asyncio.run(run_health_audit(service_fleet))
-```
 
-**Explanation of the Solution:**
-- `probe_service_async` executes single-threaded non-blocking I/O using `await asyncio.sleep()`.
-- `asyncio.Semaphore(2)` limits concurrent network connections.
-- `asyncio.gather()` orchestrates concurrent results and aggregates metrics cleanly.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Async Hello World
+async def async_hello():
+    print("Hello")
+    await asyncio.sleep(0.01)
+    print("World")
+
+# Ex 2: Multi-Timer Gather
+async def timer_task(d): await asyncio.sleep(d); return d
+async def run_timers(): return await asyncio.gather(timer_task(0.01), timer_task(0.02))
+
+# Ex 3: Background Tasks
+async def run_bg():
+    t = asyncio.create_task(timer_task(0.01))
+    await t
+
+# Ex 4: Semaphore Limiter
+async def throttled_job(sem, item):
+    async with sem: await asyncio.sleep(0.01)
+
+# Ex 5: Async Context Manager
+class AsyncLockManager:
+    async def __aenter__(self): await asyncio.sleep(0.01); return self
+    async def __aexit__(self, *a): await asyncio.sleep(0.01)
+
+# Ex 6: Async Queue
+async def queue_pipeline():
+    q = asyncio.Queue()
+    await q.put(42)
+    val = await q.get()
+    q.task_done()
+
+# Ex 7: Structured TaskGroup
+async def structured_runner():
+    async with asyncio.TaskGroup() as tg:
+        tg.create_task(asyncio.sleep(0.01))
+
+# Ex 8: to_thread Sync Offloading
+import time
+def sync_blocking_task(): time.sleep(0.01); return "done"
+async def call_sync(): return await asyncio.to_thread(sync_blocking_task)
+
+# Ex 9: Async Generator
+async def live_sensor_stream():
+    for i in range(3):
+        await asyncio.sleep(0.01)
+        yield i * 10
+```
 </details>

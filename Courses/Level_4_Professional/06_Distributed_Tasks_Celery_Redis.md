@@ -57,27 +57,107 @@ def send_marketing_campaign_email(self, user_email: str, subject: str, body: str
 
 ---
 
-## 3. Dispatching & Polling Tasks from Web APIs
+---
+
+## 4. Workflows with Celery Canvas (`group`, `chain`, `chord`)
+
+Complex distributed pipelines are constructed using Celery Canvas primitives:
 
 ```python
-# In FastAPI route handler:
-@app.post("/campaigns/send")
-async def trigger_campaign(email: str):
-    # .delay() immediately enqueues the task into Redis and returns in 1 millisecond!
-    async_task = send_marketing_campaign_email.delay(email, "Welcome to Apex", "Hello!")
-    
-    # Return immediate 202 Accepted HTTP response to client:
-    return {"status": "QUEUED", "task_id": async_task.id}
+from celery import chain, group, chord
 
-@app.get("/tasks/{task_id}")
-async def check_task_status(task_id: str):
-    task_result = celery_app.AsyncResult(task_id)
-    return {
-        "task_id": task_id,
-        "state": task_result.state, # PENDING, SUCCESS, FAILURE
-        "result": task_result.result if task_result.ready() else None
-    }
+# 1. Chain: Sequential execution passing previous result to next task
+workflow = chain(download_video.s(url) | transcode_video.s(res="1080p") | upload_s3.s())
+workflow.delay()
+
+# 2. Group: Parallel execution of multiple independent tasks
+parallel_batch = group(resize_image.s(img_id) for img_id in image_ids)
+parallel_batch.delay()
+
+# 3. Chord: Parallel tasks with a final aggregation callback
+summary = chord(
+    (audit_branch.s(branch_id) for branch_id in branches),
+    generate_master_financial_report.s()
+)
+summary.delay()
 ```
+
+---
+
+## 5. Task Idempotency & Visibility Timeouts
+
+- **At-Least-Once Delivery**: Distributed message brokers guarantee that tasks will be delivered at least once, meaning network blips or worker crashes can re-deliver the same task.
+- **Idempotency**: All background tasks must be **idempotent** (executing multiple times produces the exact same side-effect without double-charging credit cards or sending duplicate emails). Use a unique idempotency key in Redis:
+
+```python
+@celery_app.task(bind=True)
+def charge_customer_card(self, charge_id: str, amount: float):
+    # Atomic check-and-set lock in Redis:
+    if not redis_client.set(f"lock:charge:{charge_id}", "LOCKED", nx=True, ex=3600):
+        print(f"Charge {charge_id} already processed or currently processing. Skipping.")
+        return
+    payment_gateway.execute_charge(amount)
+```
+
+---
+
+## 6. Dead Letter Queues (DLQ) & Poison Pills
+
+When a malformed task permanently crashes workers (a "poison pill"), unhandled retries will cycle indefinitely. Production systems route failed tasks exceeding `max_retries` into a **Dead Letter Queue (DLQ)** for manual inspection and alerting without stalling the main queue.
+
+---
+
+## 📝 10-Tier Progressive Mastery Challenges
+
+Work through these 10 challenges to master Celery, Redis broker configuration, task retries, canvas workflows, and idempotency:
+
+---
+
+### 🟢 Tier 1: Task Declaration & Async Dispatch (Exercises 1–3)
+
+#### 🔹 Exercise 1: Basic Celery Task Definition
+* **Goal**: Define `@app.task def add(x, y)` and dispatch it asynchronously using `.delay(4, 5)`.
+
+#### 🔹 Exercise 2: AsyncResult Polling
+* **Goal**: Poll `AsyncResult(task_id)` until `ready() == True` and fetch the return value.
+
+#### 🔹 Exercise 3: Simulating Worker Processing Loop
+* **Goal**: Write an in-memory queue consumer dequeuing task messages and executing registered handlers.
+
+---
+
+### 🟡 Tier 2: Retries, Backoff & Error States (Exercises 4–6)
+
+#### 🔹 Exercise 4: Exponential Backoff Retries
+* **Goal**: Configure `bind=True, max_retries=3` with `countdown=2 ** self.request.retries` on simulated network failure.
+
+#### 🔹 Exercise 5: Task Status Tracking
+* **Goal**: Update custom task metadata (`PENDING -> PROGRESS (50%) -> SUCCESS`).
+
+#### 🔹 Exercise 6: Task Revocation & Timeouts
+* **Goal**: Set `time_limit=30` and `soft_time_limit=25` to terminate runaway runaway workers.
+
+---
+
+### 🟠 Tier 3: Canvas Workflows & Idempotency (Exercises 7–9)
+
+#### 🔹 Exercise 7: Sequential Task Chaining (`chain`)
+* **Goal**: Build a 3-step pipeline (`fetch_raw_data | parse_json | save_db`) using `chain`.
+
+#### 🔹 Exercise 8: Parallel Group with Callback (`chord`)
+* **Goal**: Dispatch 5 parallel calculations and aggregate the sum inside a callback reducer task.
+
+#### 🔹 Exercise 9: Redis-Backed Task Idempotency Guard
+* **Goal**: Implement a distributed lock preventing duplicate task execution using `redis.set(nx=True)`.
+
+---
+
+### 🟣 Tier 4: Enterprise Simulation (Exercise 10)
+
+#### 🔹 Exercise 10: High-Volume Monthly PDF Invoicing Queue
+* **Goal**: Build a production-grade background billing queue worker handling batch invoices, validation checks, and error logging.
+
+---
 
 ---
 
@@ -244,10 +324,12 @@ Failed Invoices:          1
 ```
 
 <details>
-<summary><b>🔍 View Exercise Solution</b></summary>
+<summary><b>🔍 View Exercise Solutions (Billing Queue & 10 Challenges)</b></summary>
 
 ```python
-# 1. Billing Task Definition (Level 4)
+# =====================================================================
+# SOLUTION: Monthly Invoice Billing Queue Runner
+# =====================================================================
 def generate_monthly_invoice_task(customer_id: str, billing_month: str, amount_due: float) -> dict:
     if amount_due < 0:
         raise ValueError("Invalid negative invoice amount")
@@ -258,10 +340,9 @@ def generate_monthly_invoice_task(customer_id: str, billing_month: str, amount_d
     }
 
 
-# 2. Queue Simulation Runner
 task_queue = [
     ("CUST-101", "AUG2026", 1250.00),
-    ("CUST-102", "AUG2026", -50.00), # Failure case
+    ("CUST-102", "AUG2026", -50.00),
     ("CUST-103", "AUG2026", 4500.00),
 ]
 
@@ -287,9 +368,36 @@ print(f"Total Invoices Processed: {len(task_queue)}")
 print(f"Successfully Generated:   {success_count}")
 print(f"Failed Invoices:          {fail_count}")
 print("==================================================")
-```
 
-**Explanation of the Solution:**
-- `generate_monthly_invoice_task` encapsulates long-running PDF billing jobs into an isolated, testable worker function.
-- Exceptions are caught and recorded cleanly without halting batch queue execution.
+# =====================================================================
+# SOLUTIONS: 10-Tier Progressive Challenges
+# =====================================================================
+# Ex 1: Task Delay
+# @app.task def add(x, y): return x + y
+# result = add.delay(4, 5)
+
+# Ex 2: AsyncResult Check
+# res = AsyncResult(task_id); return res.get() if res.ready() else None
+
+# Ex 3: Worker Simulation
+# def worker_loop(queue): while not queue.empty(): task = queue.pop(); task()
+
+# Ex 4: Celery Retry
+# @app.task(bind=True, max_retries=3) def flaky(self): self.retry(countdown=2**self.request.retries)
+
+# Ex 5: State Update
+# self.update_state(state="PROGRESS", meta={"percent": 50})
+
+# Ex 6: Time Limits
+# @app.task(time_limit=30, soft_time_limit=25)
+
+# Ex 7: Chain
+# chain(fetch.s(url) | parse.s() | save.s())()
+
+# Ex 8: Chord
+# chord((process.s(i) for i in items), aggregate.s())()
+
+# Ex 9: Redis Idempotency
+# def safe_task(id): if not redis.set(f"lock:{id}", 1, nx=True): return; do_work()
+```
 </details>
