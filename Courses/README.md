@@ -1,43 +1,42 @@
-# 🗺️ Master Python Curriculum: Zero to Expert
+# Python: Beginner to Expert
 
-Welcome to the comprehensive, multi-tiered Python Mastery Program. This curriculum is structured into **5 progressive course levels** that take you from total beginner to production-grade software engineer and systems expert.
+This twelve-level course progresses from a first saved script to independent investigation of Python systems and performance. All twelve levels now have detailed lessons, cumulative practice tasks, separate reference implementations, and a capstone. The course contains 79 lessons and twelve capstones.
 
----
+Start with [Level 1: Python Foundations](Level_01_Python_Foundations/README.md). Lessons live in `Courses/`, projects in `Capstones/`, and manual progression in the top-level `Progress/` folder. The [environment and run guide](Environment_And_Run_Guide.md) explains interpreters, dependencies, and the scope of reference execution.
 
-## 🧭 Course Roadmap & Master Progress Tracker
+## Reading order
 
-| Level | Course Track | Scope & Topics | Capstone Suite (20 Projects/Level) | Status | Guide Folder |
-| :--- | :--- | :--- | :--- | :---: | :--- |
-| **01** | **Beginner (1st Year / CS101)** | Variables, I/O, Conditionals, Loops, Data Structures, Basic OOP | [Level 1 Capstones (20)](file:///C:/Users/asiro/Desktop/Capstone/Python/Capstones/Level_1_Beginner/Capstones.md) | `COMPLETED` ✅ | [Level 1: Beginner](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/README.md) |
-| **02** | **Intermediate (Software Dev)** | OOP Deep Dive, Modules, Exceptions, Decorators, Generators, Pytest | [Level 2 Capstones (20)](file:///C:/Users/asiro/Desktop/Capstone/Python/Capstones/Level_2_Intermediate/Capstones.md) | `COMPLETED` ✅ | [Level 2: Intermediate](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/README.md) |
-| **03** | **Advanced (DS, Algorithms & Concurrency)** | Big-O, Custom Trees/Graphs, Multithreading, Multiprocessing, AsyncIO | [Level 3 Capstones (20)](file:///C:/Users/asiro/Desktop/Capstone/Python/Capstones/Level_3_Advanced/Capstones.md) | `COMPLETED` ✅ | [Level 3: Advanced](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_3_Advanced/README.md) |
-| **04** | **Professional (Full-Stack Backend)** | FastAPI, PostgreSQL, SQLAlchemy ORM, Docker, CI/CD, JWT Auth | [Level 4 Capstones (20)](file:///C:/Users/asiro/Desktop/Capstone/Python/Capstones/Level_4_Professional/Capstones.md) | `COMPLETED` ✅ | [Level 4: Professional](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/README.md) |
-| **05** | **Expert (Internals & Systems)** | CPython VM Bytecode, Memory Model/GC, Metaclasses, C-Extensions | [Level 5 Capstones (20)](file:///C:/Users/asiro/Desktop/Capstone/Python/Capstones/Level_5_Expert/Capstones.md) | `COMPLETED` ✅ | [Level 5: Expert](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/README.md) |
+| Level | Stage and focus | Lessons | Material | Student record |
+| --- | --- | --- | --- | --- |
+| 01 | Beginner: Python Foundations | 8 | [Lessons](Level_01_Python_Foundations/README.md) | [Progress](../Progress/Level_01_Python_Foundations.md) |
+| 02 | Beginner: Control Flow & Collections | 7 | [Lessons](Level_02_Control_Flow_And_Collections/README.md) | [Progress](../Progress/Level_02_Control_Flow_And_Collections.md) |
+| 03 | Beginner: Functions, Scope & Modules | 6 | [Lessons](Level_03_Functions_Scope_And_Modules/README.md) | [Progress](../Progress/Level_03_Functions_Scope_And_Modules.md) |
+| 04 | Beginner: Files, Exceptions & Persistent Data | 6 | [Lessons](Level_04_Files_Exceptions_And_Persistent_Data/README.md) | [Progress](../Progress/Level_04_Files_Exceptions_And_Persistent_Data.md) |
+| 05 | Intermediate: Practical Software Development | 6 | [Lessons](Level_05_Practical_Software_Development/README.md) | [Progress](../Progress/Level_05_Practical_Software_Development.md) |
+| 06 | Intermediate: Object-Oriented Programming & Design | 6 | [Lessons](Level_06_Object_Oriented_Programming_And_Design/README.md) | [Progress](../Progress/Level_06_Object_Oriented_Programming_And_Design.md) |
+| 07 | Intermediate: Idiomatic & Reusable Python | 6 | [Lessons](Level_07_Idiomatic_And_Reusable_Python/README.md) | [Progress](../Progress/Level_07_Idiomatic_And_Reusable_Python.md) |
+| 08 | Advanced: Algorithms & Data Structures | 7 | [Lessons](Level_08_Algorithms_And_Data_Structures/README.md) | [Progress](../Progress/Level_08_Algorithms_And_Data_Structures.md) |
+| 09 | Advanced: Concurrency & Async | 6 | [Lessons](Level_09_Concurrency_And_Async/README.md) | [Progress](../Progress/Level_09_Concurrency_And_Async.md) |
+| 10 | Professional: Backend Development & Databases | 7 | [Lessons](Level_10_Backend_Development_And_Databases/README.md) | [Progress](../Progress/Level_10_Backend_Development_And_Databases.md) |
+| 11 | Professional: Production Engineering | 7 | [Lessons](Level_11_Production_Engineering/README.md) | [Progress](../Progress/Level_11_Production_Engineering.md) |
+| 12 | Expert: Internals, Performance & Investigation | 7 | [Lessons](Level_12_Internals_Performance_And_Investigation/README.md) | [Progress](../Progress/Level_12_Internals_Performance_And_Investigation.md) |
 
----
+Levels 1–9 build the general language and development foundations. Level 10 specializes in backend development, followed by Level 11's deployment and operations work. Level 12's internals/performance investigation requires the general foundations; backend/operations experience is helpful but not mandatory for its independent parser study.
 
-## 📂 Level Breakdown
+## How lessons are organized
 
-1. 🟢 **[Level 1: Beginner (1st Year University Level)](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/README.md)**
-   - [01: Variables & Primitive Types](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/01_Variables_And_Data_Types.md)
-   - [02: User Input & Type Casting](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/02_User_Input_And_Type_Casting.md)
-   - [03: Operators & Expressions](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/03_Operators_And_Expressions.md)
-   - [04: Conditionals & Logic](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/04_Conditionals_And_Logic.md)
-   - [05: Loops & Iteration](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/05_Loops_And_Iteration.md)
-   - [06: Lists & Tuples](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/06_Lists_And_Tuples.md)
-   - [07: Dictionaries & Sets](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/07_Dictionaries_And_Sets.md)
-   - [08: Functions & Scope](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/08_Functions_And_Scope.md)
-   - [09: File I/O & Exception Handling](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/09_File_IO_And_Exceptions.md)
-   - [10: OOP Fundamentals](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_1_Beginner/10_OOP_Fundamentals.md)
+Read the detailed explanation and trace the examples. Work through predict/explain/modify/debug practice, then implement the independent task. That task section contains only its assignment, accepted inputs, requirements, and expected behavior.
 
-2. 🟡 **[Level 2: Intermediate (Software Craftsmanship)](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_2_Intermediate/README.md)**
-   - Advanced OOP, Properties, Abstract Classes, Custom Exceptions, Generators, Decorators, Context Managers, Type Hinting & `pytest`.
+Every Python file in `Practice/` carries its complete task as comments, so you can work directly in the file. Write your implementation below those comments. There are no TODO markers, fixed-question quizzes, or automatic course graders. Reference code is in `Solutions/`; neither directory needs a README. Some systems tasks also supply configuration assets and companion source files with their own embedded tasks.
 
-3. 🟠 **[Level 3: Advanced (Algorithms & Concurrency)](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_3_Advanced/README.md)**
-   - Computational Complexity, Custom Trees/Heaps/Graphs, Sorting/Searching, Threading (GIL), Multiprocessing, `asyncio`.
+Tasks use the current lesson and earlier material. Prerequisites and scope are stated explicitly; later-level concepts should not be necessary to complete an earlier task. Expected output is exact for deterministic examples. Timings, IDs, interpreter details, and external-service outcomes are described as observed behavior when a fixed transcript would be misleading.
 
-4. 🔵 **[Level 4: Professional (Backend Architecture)](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_4_Professional/README.md)**
-   - FastAPI, PostgreSQL, SQLAlchemy 2.0 Async, Alembic Migrations, JWT Auth, Celery/Redis Queues, Docker, CI/CD.
+Ask the assistant to review your saved work when ready. Review focuses on the real implementation, its normal/boundary/failure behavior, and your explanation of a small change. Record the outcome manually in [Progress](../Progress/README.md). Curriculum availability does not mark any student work complete.
 
-5. 🟣 **[Level 5: Expert (CPython Internals & Performance)](file:///C:/Users/asiro/Desktop/Capstone/Python/Courses/Level_5_Expert/README.md)**
-   - CPython VM & Bytecode, Memory Model & Cyclic GC, Descriptors, Metaclasses, Profiling, Cython/C-Bindings, No-GIL Python.
+## Capstones
+
+Each level requires one [capstone](../Capstones/README.md). Early projects build a calculator, tracker, reusable functions, and persistence. Later projects cover installable tools, object models, pipelines, search, concurrency, databases, deployment, and measured optimization.
+
+The API and deployment references include real requests, database operations, and migration files. Docker-dependent behavior must be demonstrated with actual containers. A printed status is not evidence of a running service; in-process tests and isolated adapters have explicitly stated limits.
+
+See [concept progression and task prerequisites](Concept_Progression.md) for the cumulative boundaries of each level and capstone.

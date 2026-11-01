@@ -1,0 +1,3 @@
+# Task: describe a setuptools project named course-expense-report, version 0.1.0,
+# requiring Python >=3.13, packaging module project, and exposing
+# expense-report = "project:main" as its console script.
